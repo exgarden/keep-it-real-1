@@ -334,34 +334,53 @@ const App: React.FC = () => {
         {screen === 'metadata' && (
           <motion.div
             key="metadata"
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex-1 bg-desk-bg flex flex-col items-center justify-center p-6"
+            className="flex-1 desk-bg flex flex-col items-center justify-center p-6"
           >
-            <div className="w-full max-w-sm glass-panel p-8 rounded-2xl flex flex-col gap-6 text-[#2A2A2A]">
-              <h3 className="text-2xl font-serif italic text-center mb-2">Verify Permanence</h3>
-              <p className="text-[10px] text-center text-[#A09E96] uppercase tracking-[0.2em] mb-4">
-                This moment will be verified on-chain.<br />It cannot be edited later.
-              </p>
-
-              <div className="space-y-4 font-typewriter text-xs">
-                <div className="flex justify-between border-b border-[#D9D4CC] pb-2">
-                  <span className="text-[#A09E96]">WALLET</span>
-                  <span className="font-bold">{publicKey ? publicKey.toBase58().slice(0, 4) + '...' + publicKey.toBase58().slice(-4) : 'Not Connected'}</span>
+            <div className="w-full max-w-sm glass-panel p-10 rounded-[2.5rem] flex flex-col gap-8 text-[#2A2A2A]">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 bg-[#2A2A2A] rounded-2xl flex items-center justify-center shadow-lg">
+                  <ShieldCheck size={24} className="text-[#F6F3EE]" />
                 </div>
-                <div className="flex justify-between border-b border-[#D9D4CC] pb-2">
-                  <span className="text-[#A09E96]">TIMESTAMP</span>
-                  <span className="font-bold">{new Date().toLocaleTimeString()}</span>
+                <h3 className="text-3xl font-serif italic text-center mt-2">Verify Reality</h3>
+              </div>
+
+              <div className="space-y-6">
+                <p className="text-[10px] text-center text-[#A09E96] uppercase tracking-[0.25em] leading-relaxed">
+                  This moment will be hashed and secured on-chain.<br />
+                  <span className="font-black text-[#2A2A2A]/40 mt-1 block">Immutable. Authentic. Yours.</span>
+                </p>
+
+                <div className="space-y-4 font-typewriter text-[10px] bg-[#F6F3EE]/50 p-6 rounded-2xl border border-white/50">
+                  <div className="flex justify-between border-b border-[#D9D4CC]/30 pb-3">
+                    <span className="text-[#A09E96] uppercase tracking-widest font-bold">Provenance</span>
+                    <span className="font-bold text-[#2A2A2A]">{publicKey ? publicKey.toBase58().slice(0, 6) + '...' + publicKey.toBase58().slice(-6) : 'Anonymous'}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-[#D9D4CC]/30 pb-3">
+                    <span className="text-[#A09E96] uppercase tracking-widest font-bold">Entropy Code</span>
+                    <span className="font-bold text-[#2A2A2A] uppercase tracking-tighter">SOL-MEM-{Math.floor(Date.now() / 1000).toString(16)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#A09E96] uppercase tracking-widest font-bold">Temporal Log</span>
+                    <span className="font-bold text-[#2A2A2A]">{new Date().toLocaleTimeString()}</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 mt-4">
-                <Button onClick={mintPhoto} className="w-full bg-[#3FA37C] hover:bg-emerald-700 border-none shadow-lg">
-                  Verify & Mint on Solana
+              <div className="flex flex-col gap-4">
+                <Button
+                  onClick={mintPhoto}
+                  className="w-full h-14 bg-[#3FA37C] hover:bg-emerald-700 border-none shadow-[0_15px_30px_-5px_rgba(63,163,124,0.3)]"
+                >
+                  Verify & Mint Proof
                 </Button>
-                <Button onClick={() => setScreen('preview')} variant="ghost" className="text-xs">
-                  Back to edits
-                </Button>
+                <button
+                  onClick={() => setScreen('preview')}
+                  className="text-[9px] uppercase tracking-[0.3em] text-[#A09E96] font-black hover:text-[#2A2A2A] transition-colors"
+                >
+                  Discard & Retake
+                </button>
               </div>
             </div>
           </motion.div>
@@ -371,22 +390,41 @@ const App: React.FC = () => {
         {screen === 'minting' && (
           <motion.div
             key="minting"
-            className="flex-1 bg-desk-bg flex flex-col items-center justify-center p-8 text-center"
+            className="flex-1 desk-bg flex flex-col items-center justify-center p-8 text-center"
           >
-            <div className="relative w-24 h-24 mb-12">
-              <div className="absolute inset-x-0 bottom-0 h-1 bg-[#D9D4CC] rounded-full"></div>
+            <div className="relative w-32 h-32 mb-16">
               <motion.div
-                initial={{ height: 0 }}
-                animate={{ height: "100%" }}
-                transition={{ duration: 5, ease: "linear" }}
-                className="absolute inset-x-0 bottom-0 bg-[#3FA37C] rounded-t-full opacity-20"
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
+                className="absolute inset-0 border-2 border-dashed border-[#3FA37C] rounded-full opacity-20"
               ></motion.div>
-              <div className="absolute inset-0 flex items-center justify-center">
+
+              <div className="absolute inset-4 bg-white/40 backdrop-blur-md rounded-full shadow-2xl flex items-center justify-center border border-white">
                 <ShieldCheck size={48} className="text-[#3FA37C] animate-pulse" />
               </div>
+
+              <div className="absolute -inset-2 bg-gradient-to-tr from-[#3FA37C]/20 to-transparent rounded-full animate-spin-slow"></div>
             </div>
-            <h2 className="text-2xl font-serif italic mb-2 text-[#2A2A2A]">{MINT_MESSAGES[mintStatus]}</h2>
-            <p className="text-[9px] uppercase tracking-[0.4em] text-[#A09E96] font-bold">Securing pixel integrity on Devnet...</p>
+
+            <motion.h2
+              key={mintStatus}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-3xl font-serif italic mb-4 text-[#2A2A2A]"
+            >
+              {MINT_MESSAGES[mintStatus]}
+            </motion.h2>
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-[10px] uppercase tracking-[0.4em] text-[#A09E96] font-black">Validating Reality on Solana</p>
+              <div className="h-1 w-24 bg-[#D9D4CC] rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ x: "-100%" }}
+                  animate={{ x: "0%" }}
+                  transition={{ duration: 1.2, repeat: Infinity }}
+                  className="w-full h-full bg-[#3FA37C]"
+                ></motion.div>
+              </div>
+            </div>
           </motion.div>
         )}
 
