@@ -1,0 +1,8 @@
+{
+  "name": "Keep It Real",
+  "description": "An authentic Polaroid-inspired camera app that verifies your raw, unedited moments on the blockchain.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
