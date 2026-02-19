@@ -1,32 +1,27 @@
+console.log("index.tsx starting...");
 import { Buffer } from 'buffer';
 window.Buffer = Buffer;
+console.log("Buffer polyfill set");
 
 import React, { useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+console.log("App component imported");
+
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { clusterApiUrl } from '@solana/web3.js';
+console.log("Solana imports done");
 
-// Default styles that can be overridden by your app
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 const Root = () => {
-  // The network can be set to 'devnet', 'testnet', or 'mainnet-beta'.
+  console.log("Rendering Root component");
   const network = WalletAdapterNetwork.Devnet;
-
-  // You can also provide a custom RPC endpoint.
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-
-  const wallets = useMemo(
-    () => [
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-    ],
-    []
-  );
+  const wallets = useMemo(() => [new PhantomWalletAdapter(), new SolflareWalletAdapter()], []);
 
   return (
     <ConnectionProvider endpoint={endpoint}>
@@ -40,13 +35,14 @@ const Root = () => {
 };
 
 const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
-}
+console.log("Root element found:", !!rootElement);
 
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <Root />
-  </React.StrictMode>
-);
+if (rootElement) {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <Root />
+    </React.StrictMode>
+  );
+  console.log("React render called");
+}
