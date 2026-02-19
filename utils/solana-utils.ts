@@ -50,7 +50,7 @@ export const fetchUserMemories = async (wallet: any, idl: Idl): Promise<Partial<
         console.log("Syncing from Solana for wallet:", wallet.publicKey.toBase58());
 
         // Fetch all accounts for this program owned by the user
-        const memories = await (program.account as any).realityProof.all([
+        const memories = await program.account.realityProof.all([
             {
                 memcmp: {
                     offset: 8, // After 8-byte discriminator
