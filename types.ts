@@ -1,5 +1,5 @@
 
-export type AppScreen = 'home' | 'camera' | 'preview' | 'metadata' | 'minting' | 'printing' | 'success' | 'gallery' | 'wallet';
+export type AppScreen = 'home' | 'camera' | 'preview' | 'metadata' | 'minting' | 'printing' | 'success' | 'gallery' | 'wallet' | 'settings';
 
 export interface LocationData {
   latitude: number | null;
@@ -16,6 +16,7 @@ export interface PolaroidPhoto {
   hash: string;
   isMinted: boolean;
   rotation: number;
+  owner: string;
 }
 
 export interface CameraSettings {

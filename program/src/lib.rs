@@ -6,66 +6,77 @@ declare_id!("KrealMoment11111111111111111111111111111111");
 pub mod keep_it_real {
     use super::*;
 
-    pub fn mint_memory(ctx: Context<MintMemory>, image_hash: String, caption: String, timestamp: i64) -> Result<()> {
-        let memory = &mut ctx.accounts.memory;
-        memory.owner = *ctx.accounts.user.key;
-        memory.image_hash = image_hash;
-        memory.caption = caption;
-        memory.timestamp = timestamp;
-        memory.is_verified = true;
+    pub fn mint_proof(
+        ctx: Context<MintProof>, 
+        image_hash: String, 
+        caption: String, 
+        timestamp: i64,
+        entropy: String,
+        dither: String
+    ) -> Result<()> {
+        let proof = &mut ctx.accounts.proof;
+        proof.owner = *ctx.accounts.user.key;
+        proof.image_hash = image_hash;
+        proof.caption = caption;
+        proof.timestamp = timestamp;
+        proof.entropy = entropy;
+        proof.dither = dither;
+        proof.is_verified = true;
         
-        emit!(MemoryMinted {
-            owner: memory.owner,
-            image_hash: memory.image_hash.clone(),
-            timestamp: memory.timestamp,
+        emit!(ProofMinted {
+            owner: proof.owner,
+            image_hash: proof.image_hash.clone(),
+            timestamp: proof.timestamp,
         });
 
         Ok(())
     }
 
-    pub fn transfer_memory(ctx: Context<TransferMemory>) -> Result<()> {
-        let memory = &mut ctx.accounts.memory;
-        memory.owner = *ctx.accounts.new_owner.key;
+    pub fn transfer_proof(ctx: Context<TransferProof>) -> Result<()> {
+        let proof = &mut ctx.accounts.proof;
+        proof.owner = *ctx.accounts.new_owner.key;
         Ok(())
     }
 }
 
 #[derive(Accounts)]
 #[instruction(image_hash: String)]
-pub struct MintMemory<'info> {
+pub struct MintProof<'info> {
     #[account(
         init,
         payer = user,
-        space = 8 + 32 + 64 + 100 + 8 + 1, // disc + owner + hash + caption + ts + bool
-        seeds = [b"memory", user.key().as_ref(), image_hash.as_bytes()],
+        space = 8 + 32 + (4 + 64) + (4 + 100) + 8 + (4 + 32) + (4 + 32) + 1,
+        seeds = [b"proof", user.key().as_ref(), image_hash.as_bytes()],
         bump
     )]
-    pub memory: Account<'info, MemoryAccount>,
+    pub proof: Account<'info, RealityProof>,
     #[account(mut)]
     pub user: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
-pub struct TransferMemory<'info> {
+pub struct TransferProof<'info> {
     #[account(mut, has_one = owner)]
-    pub memory: Account<'info, MemoryAccount>,
+    pub proof: Account<'info, RealityProof>,
     pub owner: Signer<'info>,
     /// CHECK: New owner can be any account
     pub new_owner: AccountInfo<'info>,
 }
 
 #[account]
-pub struct MemoryAccount {
+pub struct RealityProof {
     pub owner: Pubkey,
-    pub image_hash: String, // SHA-256 or CID
+    pub image_hash: String, // SHA-256
     pub caption: String,
     pub timestamp: i64,
+    pub entropy: String,    // Atmospheric Seed
+    pub dither: String,     // Dither Factor
     pub is_verified: bool,
 }
 
 #[event]
-pub struct MemoryMinted {
+pub struct ProofMinted {
     pub owner: Pubkey,
     pub image_hash: String,
     pub timestamp: i64,
