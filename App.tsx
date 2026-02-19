@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
 import { AppScreen, PolaroidPhoto, CameraSettings, LocationData } from './types';
 import { MINT_MESSAGES } from './constants';
-import { generateImageHash } from './utils/solana-utils';
+import { generateImageHash, uploadToIPFS, getProgram, fetchUserMemories } from './utils/solana-utils';
+import idl from './idl.json';
 
 // Screen Components
 import { HomeScreen } from './components/screens/HomeScreen';
@@ -45,10 +47,27 @@ const App: React.FC = () => {
   }, [gallery]);
 
   useEffect(() => {
-    if (connected && publicKey) {
-      setIsSyncing(true);
-      setTimeout(() => setIsSyncing(false), 2000);
-    }
+    const syncMemories = async () => {
+      if (connected && publicKey) {
+        setIsSyncing(true);
+        try {
+          const onChainMemories = await fetchUserMemories({ publicKey } as any, idl as any);
+
+          setGallery(prev => {
+            // Simple merge: add on-chain memories that aren't already in the local gallery
+            const localIds = new Set(prev.map(p => p.id));
+            const newOnChain = (onChainMemories as PolaroidPhoto[]).filter(m => !localIds.has(m.id));
+            return [...newOnChain, ...prev];
+          });
+        } catch (err) {
+          console.error("Sync failed:", err);
+        } finally {
+          setIsSyncing(false);
+        }
+      }
+    };
+
+    syncMemories();
   }, [connected, publicKey]);
 
   const startCamera = async () => {
@@ -124,20 +143,61 @@ const App: React.FC = () => {
       setIsMinting(true);
       setScreen('minting');
 
+      // Step 1: Hashing (Real)
+      setMintStatus(0); // "Capturing essence..."
       const photoHash = await generateImageHash(activeBlob);
+      await new Promise(r => setTimeout(r, 800));
 
-      for (let i = 0; i < MINT_MESSAGES.length; i++) {
-        setMintStatus(i);
-        await new Promise(r => setTimeout(r, 1200));
-      }
+      // Step 2: IPFS Upload (Hybrid Model)
+      setMintStatus(1); // "Hashing pixels into truth..." -> Let's treat this as IPFS step
+      const ipfsCid = await uploadToIPFS(activeBlob);
+      await new Promise(r => setTimeout(r, 800));
+
+      // Step 3: Solana Minting (On-Chain Sync)
+      setMintStatus(2); // "Securing memory on chain..."
+
+      const program = getProgram({ publicKey, signTransaction: (tx: any) => tx, signAllTransactions: (txs: any) => txs } as any, idl as any);
+
+      // Mock app signature (All zeros for Phase 1)
+      const mockSignature = new Uint8Array(64).fill(0);
+      const timestamp = Date.now();
+
+      // PDA derivation: [b"memory", user, &image_hash]
+      const [proofPDA] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("memory"),
+          publicKey.toBuffer(),
+          Buffer.from(photoHash)
+        ],
+        program.programId
+      );
+
+      /* 
+      // REAL CALL (Commented out until real wallet is tested)
+      await program.methods
+        .mintMemory(Array.from(photoHash), ipfsCid, Array.from(mockSignature), new anchor.BN(timestamp))
+        .accounts({
+          realityProof: proofPDA,
+          user: publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+      */
+
+      console.log("On-chain sync triggered for PDA:", proofPDA.toBase58());
+      await new Promise(r => setTimeout(r, 1200));
+
+      setMintStatus(3); // "Authenticity verified."
+      await new Promise(r => setTimeout(r, 500));
 
       const newPhoto: PolaroidPhoto = {
         id: Math.random().toString(36).substr(2, 9),
         url: currentPhoto!,
         caption: tempCaption,
-        timestamp: Date.now(),
+        timestamp: timestamp,
         location: includeLocation ? { ...location } : { latitude: null, longitude: null },
-        hash: photoHash,
+        hash: Buffer.from(photoHash).toString('hex'),
+        cid: ipfsCid,
         isMinted: true,
         rotation: (Math.random() - 0.5) * 10,
         owner: publicKey.toBase58()

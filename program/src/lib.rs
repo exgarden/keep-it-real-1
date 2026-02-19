@@ -6,78 +6,93 @@ declare_id!("KrealMoment11111111111111111111111111111111");
 pub mod keep_it_real {
     use super::*;
 
-    pub fn mint_proof(
-        ctx: Context<MintProof>, 
-        image_hash: String, 
-        caption: String, 
+    pub fn mint_memory(
+        ctx: Context<MintMemory>,
+        image_hash: [u8; 32],
+        ipfs_cid: String,
+        app_signature: [u8; 64],
         timestamp: i64,
-        entropy: String,
-        dither: String
     ) -> Result<()> {
-        let proof = &mut ctx.accounts.proof;
-        proof.owner = *ctx.accounts.user.key;
+        let proof = &mut ctx.accounts.reality_proof;
+
+        // Enforce CID length limit (64 chars max)
+        require!(
+            ipfs_cid.as_bytes().len() <= 64,
+            ErrorCode::CidTooLong
+        );
+
+        proof.owner = ctx.accounts.user.key();
         proof.image_hash = image_hash;
-        proof.caption = caption;
+        proof.ipfs_cid = ipfs_cid;
+        proof.app_signature = app_signature;
         proof.timestamp = timestamp;
-        proof.entropy = entropy;
-        proof.dither = dither;
         proof.is_verified = true;
-        
-        emit!(ProofMinted {
-            owner: proof.owner,
-            image_hash: proof.image_hash.clone(),
-            timestamp: proof.timestamp,
-        });
 
         Ok(())
     }
 
-    pub fn transfer_proof(ctx: Context<TransferProof>) -> Result<()> {
-        let proof = &mut ctx.accounts.proof;
-        proof.owner = *ctx.accounts.new_owner.key;
+    pub fn revoke_memory(_ctx: Context<RevokeMemory>) -> Result<()> {
+        // Anchor automatically refunds rent to `user` via `close` constraint
         Ok(())
     }
 }
 
 #[derive(Accounts)]
-#[instruction(image_hash: String)]
-pub struct MintProof<'info> {
+#[instruction(image_hash: [u8; 32])]
+pub struct MintMemory<'info> {
     #[account(
         init,
         payer = user,
-        space = 8 + 32 + (4 + 64) + (4 + 100) + 8 + (4 + 32) + (4 + 32) + 1,
-        seeds = [b"proof", user.key().as_ref(), image_hash.as_bytes()],
+        space = RealityProof::LEN,
+        seeds = [b"memory", user.key().as_ref(), &image_hash],
         bump
     )]
-    pub proof: Account<'info, RealityProof>,
+    pub reality_proof: Account<'info, RealityProof>,
+
     #[account(mut)]
     pub user: Signer<'info>,
+
     pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
-pub struct TransferProof<'info> {
-    #[account(mut, has_one = owner)]
-    pub proof: Account<'info, RealityProof>,
-    pub owner: Signer<'info>,
-    /// CHECK: New owner can be any account
-    pub new_owner: AccountInfo<'info>,
+pub struct RevokeMemory<'info> {
+    #[account(
+        mut,
+        close = user,
+        has_one = owner
+    )]
+    pub reality_proof: Account<'info, RealityProof>,
+
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
 }
 
 #[account]
 pub struct RealityProof {
-    pub owner: Pubkey,
-    pub image_hash: String, // SHA-256
-    pub caption: String,
-    pub timestamp: i64,
-    pub entropy: String,    // Atmospheric Seed
-    pub dither: String,     // Dither Factor
-    pub is_verified: bool,
+    pub owner: Pubkey,          // 32 bytes
+    pub image_hash: [u8; 32],   // 32 bytes
+    pub ipfs_cid: String,       // 4 + 64 bytes max
+    pub app_signature: [u8; 64], // 64 bytes
+    pub timestamp: i64,         // 8 bytes
+    pub is_verified: bool,      // 1 byte
 }
 
-#[event]
-pub struct ProofMinted {
-    pub owner: Pubkey,
-    pub image_hash: String,
-    pub timestamp: i64,
+impl RealityProof {
+    pub const LEN: usize =
+        8 + // discriminator
+        32 + // owner
+        32 + // image_hash
+        4 + 64 + // ipfs_cid (string prefix + max len)
+        64 + // app_signature
+        8 + // timestamp
+        1; // is_verified
+}
+
+#[error_code]
+pub enum ErrorCode {
+    #[msg("IPFS CID exceeds maximum length.")]
+    CidTooLong,
 }

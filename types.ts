@@ -14,6 +14,7 @@ export interface PolaroidPhoto {
   timestamp: number;
   location: LocationData;
   hash: string;
+  cid: string;
   isMinted: boolean;
   rotation: number;
   owner: string;

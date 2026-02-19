@@ -77,6 +77,7 @@ def start_server(port=3000):
             cwd=str(root),
             stdout=log,
             stderr=log,
+            stdin=subprocess.DEVNULL,
             env=env,
             shell=True
         )
