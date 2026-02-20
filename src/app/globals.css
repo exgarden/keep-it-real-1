@@ -1,0 +1,46 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-paper: #FDFBF7;
+  --color-vintage-white: #EFE9E1;
+  --color-charcoal: #2A2A2A;
+  --color-emerald: #3FA37C;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-serif: var(--font-bodoni), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-typewriter: var(--font-typewriter), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --bg-image-desk-texture: radial-gradient(#D9D4CC 1px, transparent 1px), linear-gradient(to right, #F0EDE8 1px, transparent 1px), linear-gradient(to bottom, #F0EDE8 1px, transparent 1px);
+  --bg-size-desk-size: 40px 40px, 200px 200px, 200px 200px;
+  --shadow-glass-panel: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
+  --shadow-polaroid-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 10px 30px -5px rgba(0, 0, 0, 0.1), inset 0 0 2px rgba(0, 0, 0, 0.05);
+  --animate-spin-slow: spin-slow 12s linear infinite;
+
+  @keyframes spin-slow {
+    0% {
+      transform: rotate(0deg);
+    }
+
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+}
+
+@layer base {
+  body {
+    @apply antialiased selection:bg-emerald/30;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/40 backdrop-blur-xl border border-white/50 shadow-glass-panel;
+  }
+
+  .glass-panel-dark {
+    @apply bg-charcoal/80 backdrop-blur-xl border border-white/10 shadow-glass-panel;
+  }
+
+  .polaroid-card {
+    @apply bg-white p-3 pb-12 shadow-polaroid-card;
+  }
+}

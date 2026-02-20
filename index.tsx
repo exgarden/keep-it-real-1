@@ -3,7 +3,7 @@ window.Buffer = Buffer;
 
 import React, { useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
+import App from './src/app/page';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
