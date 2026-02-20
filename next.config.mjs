@@ -17,7 +17,7 @@ const nextConfig = {
     compiler: {
         removeConsole: process.env.NODE_ENV === "production"
     },
-    webpack: (config) => {
+    webpack: (config, { webpack }) => {
         // Solana Polyfills for Webpack 5
         config.resolve.fallback = {
             ...config.resolve.fallback,
@@ -30,6 +30,14 @@ const nextConfig = {
             os: require.resolve('os-browserify'),
             url: require.resolve('url'),
         };
+
+        config.plugins.push(
+            new webpack.ProvidePlugin({
+                Buffer: ['buffer', 'Buffer'],
+                process: 'process/browser',
+            })
+        );
+
         return config;
     },
 };

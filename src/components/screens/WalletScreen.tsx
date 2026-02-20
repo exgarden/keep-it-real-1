@@ -15,6 +15,14 @@ export const WalletScreen: React.FC<WalletScreenProps> = ({
     connected,
     setScreen,
 }) => {
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) return null;
+
     return (
         <motion.div
             key="wallet"
@@ -34,8 +42,8 @@ export const WalletScreen: React.FC<WalletScreenProps> = ({
 
                 <div className="flex flex-col items-center gap-6">
                     {!connected ? (
-                        <div className="w-full group">
-                            <WalletMultiButton className="!bg-[#2A2A2A] hover:!bg-black !rounded-2xl !h-16 !w-full !flex !items-center !justify-center !font-bold !text-[11px] !uppercase !tracking-[0.2em] !transition-all !shadow-lg group-hover:!shadow-xl group-hover:!-translate-y-0.5" />
+                        <div className="w-full wallet-adapter-custom">
+                            <WalletMultiButton className="!bg-[#2A2A2A] hover:!bg-black !rounded-2xl !h-16 !w-full !transition-all !shadow-lg" />
                         </div>
                     ) : (
                         <motion.div

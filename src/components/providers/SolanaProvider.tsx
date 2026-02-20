@@ -7,11 +7,9 @@ import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adap
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { clusterApiUrl } from '@solana/web3.js';
 import '@solana/wallet-adapter-react-ui/styles.css';
-import { Buffer } from 'buffer';
 
-if (typeof window !== 'undefined') {
-    window.Buffer = window.Buffer || Buffer;
-}
+// Webpack ProvidePlugin now handles Buffer and process globally.
+// This file focuses on the provider configuration.
 
 export function SolanaProvider({ children }: { children: React.ReactNode }) {
     const network = WalletAdapterNetwork.Devnet;
