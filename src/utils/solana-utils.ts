@@ -5,7 +5,7 @@ import { PolaroidPhoto } from '../types';
 
 // Single Source of Truth for Program ID
 export const PROGRAM_ID = new PublicKey('7iLFBYxQFx4QL9GHmeh6ELJBiizavd7dTWxi1sQNjsJ5');
-export const DAO_TREASURY_ADDRESS = new PublicKey('KeepItRealTreasury1111111111111111111111');
+export const DAO_TREASURY_ADDRESS = new PublicKey('11111111111111111111111111111111');
 
 const IPFS_GATEWAYS = [
     process.env.NEXT_PUBLIC_PINATA_GATEWAY || 'https://gateway.pinata.cloud/ipfs/',
