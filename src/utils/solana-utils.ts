@@ -1,12 +1,17 @@
 import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
 import { Program, AnchorProvider, Idl } from '@coral-xyz/anchor';
+import { Buffer } from 'buffer';
 import { PolaroidPhoto } from '../types';
 
-// Finalized Program ID for Keep It Real (Valid Base58)
-export const PROGRAM_ID = new PublicKey('11111111111111111111111111111111');
+// Single Source of Truth for Program ID
+export const PROGRAM_ID = new PublicKey('7iLFBYxQFx4QL9GHmeh6ELJBiizavd7dTWxi1sQNjsJ5');
 
 export const getConnection = () => {
-    return new Connection(clusterApiUrl('devnet'), 'confirmed');
+    const apiKey = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
+    const endpoint = apiKey
+        ? `https://devnet.helius-rpc.com/?api-key=${apiKey}`
+        : clusterApiUrl('devnet');
+    return new Connection(endpoint, 'confirmed');
 };
 
 export const getProvider = (wallet: any) => {
@@ -16,11 +21,17 @@ export const getProvider = (wallet: any) => {
 
 export const getProgram = (wallet: any, idl: Idl) => {
     const provider = getProvider(wallet);
+
     // Address must be in IDL or passed to Program constructor (Anchor 0.30+)
     const idlWithAddress = {
         ...idl,
-        address: PROGRAM_ID.toBase58()
+        address: PROGRAM_ID.toBase58(),
+        metadata: {
+            ...((idl as any).metadata || {}),
+            address: PROGRAM_ID.toBase58()
+        }
     };
+
     return new Program(idlWithAddress as any, provider);
 };
 

@@ -4,14 +4,14 @@
 seeds = false
 skip-lint = false
 
-[programs.localnet]
-keep_it_real = "KrealMoment11111111111111111111111111111111"
+[programs.devnet]
+keep_it_real = "7iLFBYxQFx4QL9GHmeh6ELJBiizavd7dTWxi1sQNjsJ5"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "Devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

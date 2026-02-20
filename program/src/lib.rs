@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("KrealMoment11111111111111111111111111111111");
+declare_id!("7iLFBYxQFx4QL9GHmeh6ELJBiizavd7dTWxi1sQNjsJ5");
 
 #[program]
 pub mod keep_it_real {
@@ -14,11 +14,20 @@ pub mod keep_it_real {
         timestamp: i64,
     ) -> Result<()> {
         let proof = &mut ctx.accounts.reality_proof;
+        let clock = Clock::get()?;
 
-        // Enforce CID length limit (64 chars max)
+        // 1. CID Validation (Basic check)
         require!(
-            ipfs_cid.as_bytes().len() <= 64,
-            ErrorCode::CidTooLong
+            !ipfs_cid.is_empty() && ipfs_cid.as_bytes().len() <= 64,
+            ErrorCode::InvalidCid
+        );
+
+        // 2. Time Drift Protection (+/- 10 minutes)
+        // This ensures the claimed capture time is close to on-chain time
+        let drift = (timestamp - clock.unix_timestamp).abs();
+        require!(
+            drift <= 600, // 10 minutes in seconds
+            ErrorCode::TimeDriftTooLarge
         );
 
         proof.owner = ctx.accounts.user.key();
@@ -93,6 +102,8 @@ impl RealityProof {
 
 #[error_code]
 pub enum ErrorCode {
-    #[msg("IPFS CID exceeds maximum length.")]
-    CidTooLong,
+    #[msg("IPFS CID is invalid or too long.")]
+    InvalidCid,
+    #[msg("The timestamp provided differs too much from on-chain time.")]
+    TimeDriftTooLarge,
 }

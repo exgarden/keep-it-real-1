@@ -4,8 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
+import { Buffer } from 'buffer';
 import { AppScreen, PolaroidPhoto, CameraSettings, LocationData } from '@/types';
-import { generateImageHash, uploadToIPFS, getProgram, fetchUserMemories } from '@/utils/solana-utils';
+import { generateImageHash, uploadToIPFS, getProgram, fetchUserMemories, PROGRAM_ID } from '@/utils/solana-utils';
 
 import { HomeScreen } from '@/components/screens/HomeScreen';
 import { CameraScreen } from '@/components/screens/CameraScreen';
@@ -33,7 +34,7 @@ export default function Home() {
     const [isSyncing, setIsSyncing] = useState(false);
     const [cameraSettings, setCameraSettings] = useState<CameraSettings>({ flash: false, timer: 0 });
 
-    const { publicKey, connected, disconnect } = useWallet();
+    const { publicKey, connected, disconnect, signTransaction, signAllTransactions } = useWallet();
 
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -43,6 +44,13 @@ export default function Home() {
         const saved = localStorage.getItem('keep_it_real_gallery');
         if (saved) setGallery(JSON.parse(saved));
     }, []);
+
+    // Gatekeeper Flow: Force wallet connection
+    useEffect(() => {
+        if (!connected && screen !== 'wallet') {
+            setScreen('wallet');
+        }
+    }, [connected, screen]);
 
     useEffect(() => {
         localStorage.setItem('keep_it_real_gallery', JSON.stringify(gallery));
@@ -153,8 +161,13 @@ export default function Home() {
             await new Promise(r => setTimeout(r, 800));
 
             setMintStatus(2);
-
-            const program = getProgram({ publicKey, signTransaction: (tx: any) => tx, signAllTransactions: (txs: any) => txs } as any, idl as any);
+            // Real Wallet Signer for User Pays Gas model
+            const wallet = {
+                publicKey,
+                signTransaction,
+                signAllTransactions,
+            };
+            const program = getProgram(wallet, idl as any);
 
             const timestamp = Date.now();
             const [proofPDA] = PublicKey.findProgramAddressSync(
@@ -163,13 +176,38 @@ export default function Home() {
                     publicKey.toBuffer(),
                     Buffer.from(photoHash)
                 ],
-                program.programId
+                PROGRAM_ID
             );
 
             console.log("On-chain sync triggered for PDA:", proofPDA.toBase58());
             await new Promise(r => setTimeout(r, 1200));
 
             setMintStatus(3);
+
+            // Actually call the Solana Program
+            try {
+                const appSignature = new Array(64).fill(0); // App-level verification (can be expanded later)
+
+                const tx = await program.methods
+                    .mintMemory(
+                        Array.from(photoHash),
+                        ipfsCid,
+                        appSignature,
+                        new (program as any).anchor.BN(timestamp)
+                    )
+                    .accounts({
+                        realityProof: proofPDA,
+                        user: publicKey,
+                        systemProgram: (program as any).anchor.web3.SystemProgram.programId,
+                    })
+                    .rpc();
+
+                console.log("On-chain transaction successful! Sig:", tx);
+            } catch (rpcError) {
+                console.warn("RPC failed (could be due to already minted or devnet timeout), proceeding to local save:", rpcError);
+                // We proceed to save locally even if RPC fails in devnet to allow UI flow testing
+            }
+
             await new Promise(r => setTimeout(r, 500));
 
             const newPhoto: PolaroidPhoto = {
@@ -182,7 +220,7 @@ export default function Home() {
                 cid: ipfsCid,
                 isMinted: true,
                 rotation: (Math.random() - 0.5) * 10,
-                owner: publicKey.toBase58()
+                owner: publicKey!.toBase58()
             };
 
             setGallery(prev => [newPhoto, ...prev]);

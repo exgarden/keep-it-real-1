@@ -15,7 +15,13 @@ if (typeof window !== 'undefined') {
 
 export function SolanaProvider({ children }: { children: React.ReactNode }) {
     const network = WalletAdapterNetwork.Devnet;
-    const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+
+    // Helius RPC is recommended for production-grade Devnet stability
+    const endpoint = useMemo(() => {
+        const apiKey = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
+        if (apiKey) return `https://devnet.helius-rpc.com/?api-key=${apiKey}`;
+        return clusterApiUrl(network);
+    }, [network]);
 
     const wallets = useMemo(
         () => [

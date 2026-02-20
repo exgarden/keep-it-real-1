@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @theme {
   --color-paper: #FDFBF7;
@@ -27,20 +27,36 @@
 
 @layer base {
   body {
-    @apply antialiased selection:bg-emerald/30;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-emerald) 30%, transparent);
   }
 }
 
 @layer utilities {
   .glass-panel {
-    @apply bg-white/40 backdrop-blur-xl border border-white/50 shadow-glass-panel;
+    background-color: color-mix(in srgb, white 40%, transparent);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid color-mix(in srgb, white 50%, transparent);
+    box-shadow: var(--shadow-glass-panel);
   }
 
   .glass-panel-dark {
-    @apply bg-charcoal/80 backdrop-blur-xl border border-white/10 shadow-glass-panel;
+    background-color: color-mix(in srgb, var(--color-charcoal) 80%, transparent);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid color-mix(in srgb, white 10%, transparent);
+    box-shadow: var(--shadow-glass-panel);
   }
 
   .polaroid-card {
-    @apply bg-white p-3 pb-12 shadow-polaroid-card;
+    background-color: white;
+    padding: 0.75rem;
+    padding-bottom: 3rem;
+    box-shadow: var(--shadow-polaroid-card);
   }
 }

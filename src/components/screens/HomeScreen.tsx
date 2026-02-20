@@ -77,23 +77,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     </div>
                 </div>
 
-                {!connected ? (
-                    <div className="mt-12 scale-90 opacity-80 transition-opacity hover:opacity-100">
-                        <WalletMultiButton className="!bg-[#2A2A2A] !rounded-xl !h-12 !font-bold !text-[9px] !uppercase !tracking-widest" />
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center gap-2 mt-8">
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-white/40 rounded-full border border-white/50">
-                            <div className="w-1.5 h-1.5 bg-[#3FA37C] rounded-full"></div>
-                            <span className="text-[8px] font-bold text-[#A09E96] uppercase tracking-widest leading-none">
+                {connected && (
+                    <div className="flex flex-col items-center gap-2 mt-12 w-full px-4">
+                        <div className="flex items-center gap-2 px-4 py-2 bg-white/40 rounded-full border border-white/50 shadow-sm">
+                            <div className="w-1.5 h-1.5 bg-[#3FA37C] rounded-full animate-pulse"></div>
+                            <span className="text-[8px] font-black text-[#A09E96] uppercase tracking-[0.3em] leading-none">
                                 {publicKey?.toBase58().slice(0, 4)}...{publicKey?.toBase58().slice(-4)}
                             </span>
                         </div>
                         <button
                             onClick={() => disconnect()}
-                            className="text-[9px] uppercase tracking-widest font-bold text-[#A09E96] hover:text-[#2A2A2A] transition-colors"
+                            className="mt-2 text-[8px] uppercase tracking-[0.4em] font-black text-[#A09E96]/60 hover:text-[#2A2A2A] transition-colors"
                         >
-                            Disconnect
+                            Log Out Identity
                         </button>
                     </div>
                 )}
