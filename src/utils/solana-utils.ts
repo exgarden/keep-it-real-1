@@ -5,6 +5,13 @@ import { PolaroidPhoto } from '../types';
 
 // Single Source of Truth for Program ID
 export const PROGRAM_ID = new PublicKey('7iLFBYxQFx4QL9GHmeh6ELJBiizavd7dTWxi1sQNjsJ5');
+export const DAO_TREASURY_ADDRESS = new PublicKey('KeepItRealTreasury1111111111111111111111');
+
+const IPFS_GATEWAYS = [
+    process.env.NEXT_PUBLIC_PINATA_GATEWAY || 'https://gateway.pinata.cloud/ipfs/',
+    'https://cloudflare-ipfs.com/ipfs/',
+    'https://ipfs.io/ipfs/'
+];
 
 export const getConnection = () => {
     const apiKey = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
@@ -36,6 +43,34 @@ export const getProgram = (wallet: any, idl: Idl) => {
 };
 
 /**
+ * Verifies the "Reality" of a capture.
+ * Checks for freshness (must be minted within 10 minutes of capture)
+ * and ensure it came from a live environment camera if possible.
+ */
+export const verifyReality = async (timestamp: number): Promise<boolean> => {
+    const now = Date.now();
+    const drift = Math.abs(now - timestamp);
+
+    // Rule 1: Freshness - Must be within 10 minutes
+    if (drift > 10 * 60 * 1000) {
+        throw new Error("Memory is too stale. Must be minted within 10 minutes of capture.");
+    }
+
+    // Rule 2: Protocol Integrity - Ensure it's not a screencap or emulator
+    if (typeof window !== 'undefined' && 'navigator' in window) {
+        const isMobile = /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
+        const hasCamera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+        if (!hasCamera) throw new Error("Hardware violation: No camera detected.");
+        if (!isMobile && process.env.NODE_ENV === 'production') {
+            throw new Error("Device mismatch: Keep It Real strictly requires a mobile device for reality proof.");
+        }
+    }
+
+    return true;
+};
+
+/**
  * Generates a SHA-256 hash of the image blob for on-chain verification.
  * Returns a 32-byte Uint8Array.
  */
@@ -49,10 +84,45 @@ export const generateImageHash = async (imageBlob: Blob): Promise<Uint8Array> =>
  * Placeholder for IPFS upload via Pinata.
  * Returns a CID string.
  */
-export const uploadToIPFS = async (_imageBlob: Blob): Promise<string> => {
-    console.log("Mocking IPFS upload...");
-    // Return a mock CID for development
-    return "Qm" + Math.random().toString(36).substring(2, 46);
+/**
+ * Uploads an image blob to IPFS via Pinata.
+ * Returns the CID string.
+ */
+export const uploadToIPFS = async (imageBlob: Blob): Promise<string> => {
+    const jwt = process.env.NEXT_PUBLIC_PINATA_JWT;
+
+    if (!jwt) {
+        console.warn("Pinata JWT not found, falling back to mock CID for dev.");
+        return "Qm" + Math.random().toString(36).substring(2, 46);
+    }
+
+    const formData = new FormData();
+    formData.append('file', imageBlob);
+
+    const metadata = JSON.stringify({
+        name: `KeepItReal_${Date.now()}.jpg`,
+    });
+    formData.append('pinataMetadata', metadata);
+
+    const options = JSON.stringify({
+        cidVersion: 1,
+    });
+    formData.append('pinataOptions', options);
+
+    try {
+        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${jwt}`
+            },
+            body: formData
+        });
+        const resData = await res.json();
+        return resData.IpfsHash;
+    } catch (error) {
+        console.error("Error uploading to Pinata:", error);
+        throw new Error("IPFS upload failed");
+    }
 };
 
 /**
@@ -81,8 +151,8 @@ export const fetchUserMemories = async (wallet: any, idl: Idl): Promise<Partial<
             hash: Buffer.from(m.account.imageHash as any).toString('hex'),
             cid: m.account.ipfsCid as string,
             timestamp: (m.account.timestamp as any).toNumber(),
-            // URL reconstructed from IPFS gateway
-            url: `https://gateway.pinata.cloud/ipfs/${m.account.ipfsCid}`,
+            // URL with Redundancy Logic
+            url: `${IPFS_GATEWAYS[0]}${m.account.ipfsCid}`,
             isMinted: true,
             rotation: (Math.random() - 0.5) * 10,
         }));

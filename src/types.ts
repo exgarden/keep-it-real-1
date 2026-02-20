@@ -16,6 +16,7 @@ export interface PolaroidPhoto {
   hash: string;
   cid: string;
   isMinted: boolean;
+  isPending?: boolean;
   rotation: number;
   owner: string;
 }

@@ -90,8 +90,13 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                                 <img
                                     src={photo.url}
                                     alt={photo.caption}
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                    className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 ${photo.isPending ? 'grayscale blur-[1px] opacity-70' : ''}`}
                                 />
+                                {photo.isPending && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="w-1.5 h-1.5 bg-[#3FA37C] rounded-full animate-pulse"></div>
+                                    </div>
+                                )}
                                 <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                     <ExternalLink size={20} className="text-white" />
                                 </div>
@@ -128,7 +133,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
                             <div className="text-center">
                                 <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-white/60">
-                                    {new Date(gallery[selectedPhotoIndex].timestamp).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                                    {new Date(gallery[selectedPhotoIndex].timestamp || Date.now()).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
                                 </p>
                                 <p className="text-[8px] uppercase tracking-[0.1em] text-white/40">
                                     {gallery[selectedPhotoIndex].location.label || 'Unknown Reality'}
@@ -171,7 +176,8 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                                 <PolaroidCard
                                     {...gallery[selectedPhotoIndex]}
                                     imageSrc={gallery[selectedPhotoIndex].url}
-                                    isMinted={true}
+                                    isMinted={gallery[selectedPhotoIndex].isMinted}
+                                    isPending={gallery[selectedPhotoIndex].isPending}
                                     className="mx-auto shadow-[0_50px_100px_rgba(0,0,0,0.5)] rotate-0"
                                 />
                             </motion.div>

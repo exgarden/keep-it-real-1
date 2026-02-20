@@ -8,8 +8,8 @@ export const COLORS = {
 };
 
 export const MINT_MESSAGES = [
-  "Capturing the essence...",
-  "Hashing pixels into truth...",
-  "Securing memory on chain...",
-  "Authenticity verified.",
+  "Securing memory...",
+  "Encoding reality...",
+  "Waiting for identity approval...",
+  "Memory locked forever.",
 ];

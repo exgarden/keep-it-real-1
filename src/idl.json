@@ -16,6 +16,10 @@
                     "isSigner": true
                 },
                 {
+                    "name": "daoTreasury",
+                    "isMut": true,
+                    "isSigner": false
+                },                {
                     "name": "systemProgram",
                     "isMut": false,
                     "isSigner": false
@@ -119,8 +123,13 @@
     "errors": [
         {
             "code": 6000,
-            "name": "CidTooLong",
-            "msg": "IPFS CID exceeds maximum length."
+            "name": "InvalidCid",
+            "msg": "IPFS CID is invalid or too long."
+        },
+        {
+            "code": 6001,
+            "name": "TimeDriftTooLarge",
+            "msg": "The timestamp provided differs too much from on-chain time."
         }
     ]
 }

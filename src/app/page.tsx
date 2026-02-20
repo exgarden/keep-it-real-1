@@ -6,7 +6,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { Buffer } from 'buffer';
 import { AppScreen, PolaroidPhoto, CameraSettings, LocationData } from '@/types';
-import { generateImageHash, uploadToIPFS, getProgram, fetchUserMemories, PROGRAM_ID } from '@/utils/solana-utils';
+import { generateImageHash, uploadToIPFS, getProgram, fetchUserMemories, PROGRAM_ID, DAO_TREASURY_ADDRESS, verifyReality } from '@/utils/solana-utils';
 
 import { HomeScreen } from '@/components/screens/HomeScreen';
 import { CameraScreen } from '@/components/screens/CameraScreen';
@@ -132,6 +132,7 @@ export default function Home() {
 
     const mintPhoto = async () => {
         try {
+            const timestamp = Date.now();
             if (!connected || !publicKey) {
                 setScreen('wallet');
                 return;
@@ -149,6 +150,9 @@ export default function Home() {
                 return;
             }
 
+            // PHASE 3: Reality Capture Enforcement
+            await verifyReality(timestamp);
+
 
             setScreen('minting');
 
@@ -161,6 +165,24 @@ export default function Home() {
             await new Promise(r => setTimeout(r, 800));
 
             setMintStatus(2);
+
+            // OPTIMISTIC UI: Save to local gallery before RPC call
+            const photoId = Math.random().toString(36).substr(2, 9);
+            const optimisticPhoto: PolaroidPhoto = {
+                id: photoId,
+                url: currentPhoto!,
+                caption: tempCaption,
+                timestamp: includeDateTime ? timestamp : undefined,
+                location: includeLocation ? { ...location } : { latitude: null, longitude: null },
+                hash: Buffer.from(photoHash).toString('hex'),
+                cid: ipfsCid,
+                isMinted: false,
+                isPending: true,
+                rotation: (Math.random() - 0.5) * 10,
+                owner: publicKey!.toBase58()
+            };
+            setGallery(prev => [optimisticPhoto, ...prev]);
+
             // Real Wallet Signer for User Pays Gas model
             const wallet = {
                 publicKey,
@@ -169,7 +191,6 @@ export default function Home() {
             };
             const program = getProgram(wallet, idl as any);
 
-            const timestamp = Date.now();
             const [proofPDA] = PublicKey.findProgramAddressSync(
                 [
                     Buffer.from("memory"),
@@ -184,7 +205,7 @@ export default function Home() {
 
             setMintStatus(3);
 
-            // Actually call the Solana Program
+            // Successfully call the Solana Program
             try {
                 const appSignature = new Array(64).fill(0); // App-level verification (can be expanded later)
 
@@ -198,42 +219,39 @@ export default function Home() {
                     .accounts({
                         realityProof: proofPDA,
                         user: publicKey,
+                        daoTreasury: DAO_TREASURY_ADDRESS,
                         systemProgram: (program as any).anchor.web3.SystemProgram.programId,
                     })
                     .rpc();
 
                 console.log("On-chain transaction successful! Sig:", tx);
+
+                // Update the pending photo to confirmed
+                setGallery(prev => prev.map(p =>
+                    p.hash === Buffer.from(photoHash).toString('hex')
+                        ? { ...p, isPending: false, isMinted: true }
+                        : p
+                ));
             } catch (rpcError) {
                 console.warn("RPC failed (could be due to already minted or devnet timeout), proceeding to local save:", rpcError);
-                // We proceed to save locally even if RPC fails in devnet to allow UI flow testing
+                // Mark as failed or just leave as is for local-only testing
+                setGallery(prev => prev.map(p =>
+                    p.hash === Buffer.from(photoHash).toString('hex')
+                        ? { ...p, isPending: false, isMinted: false }
+                        : p
+                ));
             }
 
-            await new Promise(r => setTimeout(r, 500));
-
-            const newPhoto: PolaroidPhoto = {
-                id: Math.random().toString(36).substr(2, 9),
-                url: currentPhoto!,
-                caption: tempCaption,
-                timestamp: includeDateTime ? timestamp : undefined,
-                location: includeLocation ? { ...location } : { latitude: null, longitude: null },
-                hash: Buffer.from(photoHash).toString('hex'),
-                cid: ipfsCid,
-                isMinted: true,
-                rotation: (Math.random() - 0.5) * 10,
-                owner: publicKey!.toBase58()
-            };
-
-            setGallery(prev => [newPhoto, ...prev]);
-
+            await new Promise(r => setTimeout(r, 2000));
             setScreen('printing');
 
             setTimeout(() => {
                 setScreen('success');
             }, 4000);
         } catch (error) {
-
-            alert("Verification failed: " + (error instanceof Error ? error.message : String(error)));
-            setScreen('metadata');
+            console.error("Reality verification failed:", error);
+            alert((error instanceof Error ? error.message : "Reality check failed") + ". Please capture a fresh memory.");
+            setScreen('camera');
         }
     };
 

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Check } from 'lucide-react';
 import { MINT_MESSAGES } from '@/constants';
 
 interface MintingScreenProps {
@@ -24,8 +24,25 @@ export const MintingScreen: React.FC<MintingScreenProps> = ({
                     className="absolute inset-0 border-2 border-dashed border-[#3FA37C] rounded-full opacity-20"
                 ></motion.div>
 
-                <div className="absolute inset-4 bg-white/40 backdrop-blur-md rounded-full shadow-2xl flex items-center justify-center border border-white">
-                    <ShieldCheck size={48} className="text-[#3FA37C] animate-pulse" />
+                <div className="absolute inset-4 bg-white/40 backdrop-blur-md rounded-full shadow-2xl flex items-center justify-center border border-white overflow-hidden">
+                    <motion.div
+                        key={mintStatus === 3 ? 'success' : 'loading'}
+                        initial={{ scale: 0.5, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: "spring", stiffness: 200 }}
+                    >
+                        {mintStatus === 3 ? (
+                            <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="bg-[#3FA37C] p-4 rounded-full"
+                            >
+                                <Check size={32} className="text-white" strokeWidth={4} />
+                            </motion.div>
+                        ) : (
+                            <ShieldCheck size={48} className="text-[#3FA37C] animate-pulse" />
+                        )}
+                    </motion.div>
                 </div>
 
                 <div className="absolute -inset-2 bg-gradient-to-tr from-[#3FA37C]/20 to-transparent rounded-full animate-spin-slow"></div>
@@ -40,8 +57,8 @@ export const MintingScreen: React.FC<MintingScreenProps> = ({
                 {MINT_MESSAGES[mintStatus]}
             </motion.h2>
             <div className="flex flex-col items-center gap-2">
-                <p className="text-[10px] uppercase tracking-[0.4em] text-[#A09E96] font-black">Validating Reality on Solana</p>
-                <div className="h-1 w-24 bg-[#D9D4CC] rounded-full overflow-hidden">
+                <p className="text-[9px] uppercase tracking-[0.6em] text-[#3FA37C] font-black">Certified on Solana</p>
+                <div className="h-[1px] w-32 bg-[#D9D4CC] mt-2 relative overflow-hidden">
                     <motion.div
                         initial={{ x: "-100%" }}
                         animate={{ x: "0%" }}

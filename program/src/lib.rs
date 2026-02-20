@@ -2,6 +2,8 @@ use anchor_lang::prelude::*;
 
 declare_id!("7iLFBYxQFx4QL9GHmeh6ELJBiizavd7dTWxi1sQNjsJ5");
 
+pub const STORAGE_FEE: u64 = 2_000_000; // 0.002 SOL in lamports
+
 #[program]
 pub mod keep_it_real {
     use super::*;
@@ -13,6 +15,16 @@ pub mod keep_it_real {
         app_signature: [u8; 64],
         timestamp: i64,
     ) -> Result<()> {
+        // 0. Transfer Preservation Fee to Treasury
+        let cpi_context = CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            anchor_lang::system_program::Transfer {
+                from: ctx.accounts.user.to_account_info(),
+                to: ctx.accounts.dao_treasury.to_account_info(),
+            },
+        );
+        anchor_lang::system_program::transfer(cpi_context, STORAGE_FEE)?;
+
         let proof = &mut ctx.accounts.reality_proof;
         let clock = Clock::get()?;
 
@@ -60,6 +72,10 @@ pub struct MintMemory<'info> {
 
     #[account(mut)]
     pub user: Signer<'info>,
+
+    /// CHECK: Protocol treasury account receiving the preservation fee
+    #[account(mut)]
+    pub dao_treasury: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
 }
