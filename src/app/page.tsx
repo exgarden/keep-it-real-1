@@ -6,7 +6,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { Buffer } from 'buffer';
 import { AppScreen, PolaroidPhoto, CameraSettings, LocationData } from '@/types';
-import { generateImageHash, uploadToIPFS, getProgram, fetchUserMemories, PROGRAM_ID, DAO_TREASURY_ADDRESS, verifyReality } from '@/utils/solana-utils';
+import { generateImageHash, uploadToIPFS, uploadMetadataToIPFS, getProgram, fetchUserMemories, PROGRAM_ID, DAO_TREASURY_ADDRESS, verifyReality } from '@/utils/solana-utils';
 
 import { HomeScreen } from '@/components/screens/HomeScreen';
 import { CameraScreen } from '@/components/screens/CameraScreen';
@@ -18,8 +18,7 @@ import { SuccessScreen } from '@/components/screens/SuccessScreen';
 import { GalleryScreen } from '@/components/screens/GalleryScreen';
 import { WalletScreen } from '@/components/screens/WalletScreen';
 
-// We need idl for the Solana program connection
-import idl from '@/idl.json';
+
 
 export default function Home() {
     const [screen, setScreen] = useState<AppScreen>('home');
@@ -41,9 +40,15 @@ export default function Home() {
     const trackRef = useRef<MediaStreamTrack | null>(null);
 
     useEffect(() => {
-        const saved = localStorage.getItem('keep_it_real_gallery');
-        if (saved) setGallery(JSON.parse(saved));
-    }, []);
+        if (connected && publicKey) {
+            const storageKey = `keep_it_real_gallery_${publicKey.toBase58()}`;
+            const saved = localStorage.getItem(storageKey);
+            if (saved) setGallery(JSON.parse(saved));
+            else setGallery([]);
+        } else {
+            setGallery([]);
+        }
+    }, [connected, publicKey]);
 
     // Gatekeeper Flow: Force wallet connection
     useEffect(() => {
@@ -53,8 +58,11 @@ export default function Home() {
     }, [connected, screen]);
 
     useEffect(() => {
-        localStorage.setItem('keep_it_real_gallery', JSON.stringify(gallery));
-    }, [gallery]);
+        if (connected && publicKey) {
+            const storageKey = `keep_it_real_gallery_${publicKey.toBase58()}`;
+            localStorage.setItem(storageKey, JSON.stringify(gallery));
+        }
+    }, [gallery, connected, publicKey]);
 
     useEffect(() => {
         const syncMemories = async () => {
@@ -62,7 +70,7 @@ export default function Home() {
                 setIsSyncing(true);
                 try {
                     // Cast publicKey properly
-                    const onChainMemories = await fetchUserMemories({ publicKey } as any, idl as any);
+                    const onChainMemories = await fetchUserMemories({ publicKey } as any);
 
                     setGallery(prev => {
                         const localIds = new Set(prev.map(p => p.id));
@@ -161,10 +169,18 @@ export default function Home() {
             await new Promise(r => setTimeout(r, 800));
 
             setMintStatus(1);
-            const ipfsCid = await uploadToIPFS(activeBlob);
+            const imageCid = await uploadToIPFS(activeBlob);
             await new Promise(r => setTimeout(r, 800));
 
             setMintStatus(2);
+            const metadataCid = await uploadMetadataToIPFS(imageCid, {
+                caption: tempCaption,
+                timestamp: timestamp,
+                location: includeLocation ? location : { latitude: null, longitude: null }
+            });
+            await new Promise(r => setTimeout(r, 800));
+
+            setMintStatus(2); // Keep status 2 as "Syncing on-chain" or update if needed
 
             // OPTIMISTIC UI: Save to local gallery before RPC call
             const photoId = Math.random().toString(36).substr(2, 9);
@@ -175,7 +191,7 @@ export default function Home() {
                 timestamp: includeDateTime ? timestamp : undefined,
                 location: includeLocation ? { ...location } : { latitude: null, longitude: null },
                 hash: Buffer.from(photoHash).toString('hex'),
-                cid: ipfsCid,
+                cid: metadataCid,
                 isMinted: false,
                 isPending: true,
                 rotation: (Math.random() - 0.5) * 10,
@@ -189,7 +205,7 @@ export default function Home() {
                 signTransaction,
                 signAllTransactions,
             };
-            const program = getProgram(wallet, idl as any);
+            const program = getProgram(wallet);
 
             const [proofPDA] = PublicKey.findProgramAddressSync(
                 [
@@ -212,7 +228,7 @@ export default function Home() {
                 const tx = await program.methods
                     .mintMemory(
                         Array.from(photoHash),
-                        ipfsCid,
+                        metadataCid,
                         appSignature,
                         new (program as any).anchor.BN(timestamp)
                     )

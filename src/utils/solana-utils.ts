@@ -1,7 +1,6 @@
 import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
 import { Program, AnchorProvider, Idl } from '@coral-xyz/anchor';
 import { Buffer } from 'buffer';
-import { PolaroidPhoto } from '../types';
 
 // Single Source of Truth for Program ID
 export const PROGRAM_ID = new PublicKey('7iLFBYxQFx4QL9GHmeh6ELJBiizavd7dTWxi1sQNjsJ5');
@@ -26,20 +25,82 @@ export const getProvider = (wallet: any) => {
     return new AnchorProvider(connection, wallet, AnchorProvider.defaultOptions());
 };
 
-export const getProgram = (wallet: any, idl: Idl) => {
-    const provider = getProvider(wallet);
-
-    // Address must be in IDL or passed to Program constructor (Anchor 0.30+)
-    const idlWithAddress = {
-        ...idl,
-        address: PROGRAM_ID.toBase58(),
-        metadata: {
-            ...((idl as any).metadata || {}),
-            address: PROGRAM_ID.toBase58()
+const PROGRAM_IDL = {
+    "address": "7iLFBYxQFx4QL9GHmeh6ELJBiizavd7dTWxi1sQNjsJ5",
+    "metadata": {
+        "name": "keep_it_real",
+        "version": "0.1.0",
+        "spec": "0.1.0",
+        "description": "Created with Anchor"
+    },
+    "instructions": [
+        {
+            "name": "mintMemory",
+            "discriminator": [13, 175, 116, 95, 164, 199, 151, 15],
+            "accounts": [
+                { "name": "realityProof", "writable": true, "signer": false },
+                { "name": "user", "writable": true, "signer": true },
+                { "name": "daoTreasury", "writable": true, "signer": false },
+                { "name": "systemProgram", "address": "11111111111111111111111111111111", "writable": false, "signer": false }
+            ],
+            "args": [
+                { "name": "imageHash", "type": { "array": ["u8", 32] } },
+                { "name": "ipfsCid", "type": "string" },
+                { "name": "appSignature", "type": { "array": ["u8", 64] } },
+                { "name": "timestamp", "type": "i64" }
+            ]
+        },
+        {
+            "name": "revokeMemory",
+            "discriminator": [43, 184, 66, 119, 163, 164, 140, 17],
+            "accounts": [
+                { "name": "realityProof", "writable": true, "signer": false },
+                { "name": "user", "writable": true, "signer": true },
+                { "name": "systemProgram", "address": "11111111111111111111111111111111", "writable": false, "signer": false }
+            ],
+            "args": []
         }
-    };
+    ],
+    "accounts": [
+        { "name": "RealityProof", "discriminator": [245, 170, 92, 135, 16, 21, 150, 154] }
+    ],
+    "types": [
+        {
+            "name": "RealityProof",
+            "type": {
+                "kind": "struct",
+                "fields": [
+                    { "name": "owner", "type": "pubkey" },
+                    { "name": "imageHash", "type": { "array": ["u8", 32] } },
+                    { "name": "ipfsCid", "type": "string" },
+                    { "name": "appSignature", "type": { "array": ["u8", 64] } },
+                    { "name": "timestamp", "type": "i64" },
+                    { "name": "isVerified", "type": "bool" }
+                ]
+            }
+        }
+    ],
+    "errors": [
+        { "code": 6000, "name": "InvalidCid", "msg": "IPFS CID is invalid or too long." },
+        { "code": 6001, "name": "TimeDriftTooLarge", "msg": "The timestamp provided differs too much from on-chain time." }
+    ]
+};
 
-    return new Program(idlWithAddress as any, provider);
+export const getProgram = (wallet: any, idl: Idl = PROGRAM_IDL as any) => {
+    const provider = getProvider(wallet);
+    const activeIdl = idl || PROGRAM_IDL;
+
+    console.log("Initializing Program with IDL:", {
+        name: (activeIdl as any).metadata?.name,
+        hasTypes: !!(activeIdl as any).types,
+        typesCount: (activeIdl as any).types?.length
+    });
+
+    if (!(activeIdl as any).types) {
+        throw new Error("CRITICAL: IDL types are missing. Check solana-utils.ts consolidation.");
+    }
+
+    return new Program(activeIdl as any, provider);
 };
 
 /**
@@ -126,38 +187,115 @@ export const uploadToIPFS = async (imageBlob: Blob): Promise<string> => {
 };
 
 /**
+ * Uploads a metadata JSON object to IPFS via Pinata.
+ * Returns the Metadata CID string.
+ */
+export const uploadMetadataToIPFS = async (imageCid: string, metadata: { caption: string, timestamp: number, location: any }): Promise<string> => {
+    const jwt = process.env.NEXT_PUBLIC_PINATA_JWT;
+
+    if (!jwt) {
+        console.warn("Pinata JWT not found, falling back to mock Metadata CID for dev.");
+        return "Qm" + Math.random().toString(36).substring(2, 46);
+    }
+
+    const body = JSON.stringify({
+        pinataContent: {
+            name: "Reality Proof",
+            description: metadata.caption || "Minted memory from Keep It Real",
+            image: `ipfs://${imageCid}`,
+            attributes: [
+                { trait_type: "Caption", value: metadata.caption },
+                { trait_type: "Timestamp", value: new Date(metadata.timestamp).toISOString() },
+                { trait_type: "Location", value: JSON.stringify(metadata.location) }
+            ],
+            // Custom fields for app recovery
+            keep_it_real_metadata: {
+                caption: metadata.caption,
+                timestamp: metadata.timestamp,
+                location: metadata.location,
+                image_cid: imageCid
+            }
+        },
+        pinataMetadata: {
+            name: `Metadata_${Date.now()}.json`,
+        },
+        pinataOptions: {
+            cidVersion: 1,
+        }
+    });
+
+    try {
+        const res = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${jwt}`,
+                'Content-Type': 'application/json'
+            },
+            body: body
+        });
+        const resData = await res.json();
+        return resData.IpfsHash;
+    } catch (error) {
+        console.error("Error uploading Metadata to Pinata:", error);
+        throw new Error("IPFS Metadata upload failed");
+    }
+};
+
+/**
  * Fetches all reality proofs from the blockchain for a specific user.
  * This is the core of the "On-Chain Sync" feature.
  */
-export const fetchUserMemories = async (wallet: any, idl: Idl): Promise<Partial<PolaroidPhoto>[]> => {
-    const program = getProgram(wallet, idl);
-
+export const fetchUserMemories = async ({ publicKey }: { publicKey: PublicKey }, idl: any = PROGRAM_IDL) => {
     try {
-        console.log("Syncing from Solana for wallet:", wallet.publicKey.toBase58());
-
-        // Fetch all accounts for this program owned by the user
+        const program = getProgram({ publicKey }, idl);
         const memories = await (program.account as any).realityProof.all([
             {
                 memcmp: {
-                    offset: 8, // After 8-byte discriminator
-                    bytes: wallet.publicKey.toBase58(),
+                    offset: 8, // Discriminator
+                    bytes: publicKey.toBase58(),
                 },
             },
         ]);
 
-        return memories.map((m: any) => ({
-            id: m.publicKey.toBase58(),
-            owner: m.account.owner.toBase58(),
-            hash: Buffer.from(m.account.imageHash as any).toString('hex'),
-            cid: m.account.ipfsCid as string,
-            timestamp: (m.account.timestamp as any).toNumber(),
-            // URL with Redundancy Logic
-            url: `${IPFS_GATEWAYS[0]}${m.account.ipfsCid}`,
-            isMinted: true,
-            rotation: (Math.random() - 0.5) * 10,
+        const resolvedMemories = await Promise.all(memories.map(async (m: any) => {
+            const cid = m.account.ipfsCid as string;
+            let metadata: any = null;
+
+            // Simple check: if it looks like a Metadata CID (could be improved)
+            // For now, try to fetch and see if it's JSON
+            try {
+                const res = await fetch(`${IPFS_GATEWAYS[0]}${cid}`);
+                const contentType = res.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    const json = await res.json();
+                    if (json.keep_it_real_metadata) {
+                        metadata = json.keep_it_real_metadata;
+                    }
+                }
+            } catch (e) {
+                console.warn("Could not fetch metadata for CID:", cid);
+            }
+
+            return {
+                id: m.publicKey.toBase58(),
+                owner: m.account.owner.toBase58(),
+                hash: Buffer.from(m.account.imageHash as any).toString('hex'),
+                cid: cid,
+                timestamp: (m.account.timestamp as any).toNumber(),
+                // If we have metadata, use the image_cid from it, otherwise use the CID itself as the image
+                url: metadata
+                    ? `${IPFS_GATEWAYS[0]}${metadata.image_cid}`
+                    : `${IPFS_GATEWAYS[0]}${cid}`,
+                caption: metadata?.caption || "",
+                location: metadata?.location || { latitude: null, longitude: null },
+                isMinted: true,
+                rotation: (Math.random() - 0.5) * 10,
+            };
         }));
+
+        return resolvedMemories;
     } catch (error) {
-        console.error("Failed to sync memories:", error);
+        console.error("Error fetching memories:", error);
         return [];
     }
 };

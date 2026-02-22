@@ -4,6 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Wallet } from 'lucide-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { Button } from '../Button';
 
 interface WalletScreenProps {
@@ -16,6 +17,7 @@ export const WalletScreen: React.FC<WalletScreenProps> = ({
     setScreen,
 }) => {
     const [mounted, setMounted] = React.useState(false);
+    const { connecting, disconnect } = useWallet();
 
     React.useEffect(() => {
         setMounted(true);
@@ -42,8 +44,24 @@ export const WalletScreen: React.FC<WalletScreenProps> = ({
 
                 <div className="flex flex-col items-center gap-6">
                     {!connected ? (
-                        <div className="w-full wallet-adapter-custom">
-                            <WalletMultiButton className="!bg-[#2A2A2A] hover:!bg-black !rounded-2xl !h-16 !w-full !transition-all !shadow-lg" />
+                        <div className="w-full space-y-4">
+                            <div className="w-full wallet-adapter-custom">
+                                <WalletMultiButton className="!bg-[#2A2A2A] hover:!bg-black !rounded-2xl !h-16 !w-full !transition-all !shadow-lg" />
+                            </div>
+
+                            {connecting && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                >
+                                    <button
+                                        onClick={() => disconnect()}
+                                        className="text-[10px] text-[#A09E96] hover:text-[#2A2A2A] uppercase tracking-widest font-bold underline decoration-dotted transition-colors"
+                                    >
+                                        Cancel & Reset Connection
+                                    </button>
+                                </motion.div>
+                            )}
                         </div>
                     ) : (
                         <motion.div

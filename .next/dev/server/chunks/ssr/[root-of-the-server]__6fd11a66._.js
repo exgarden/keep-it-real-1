@@ -9,6 +9,8 @@ module.exports = mod;
 "use strict";
 
 __turbopack_context__.s([
+    "DAO_TREASURY_ADDRESS",
+    ()=>DAO_TREASURY_ADDRESS,
     "PROGRAM_ID",
     ()=>PROGRAM_ID,
     "fetchUserMemories",
@@ -22,7 +24,9 @@ __turbopack_context__.s([
     "getProvider",
     ()=>getProvider,
     "uploadToIPFS",
-    ()=>uploadToIPFS
+    ()=>uploadToIPFS,
+    "verifyReality",
+    ()=>verifyReality
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$web3$2e$js$2f$lib$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/@solana/web3.js/lib/index.esm.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$coral$2d$xyz$2f$anchor$2f$dist$2f$esm$2f$index$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/node_modules/@coral-xyz/anchor/dist/esm/index.js [app-ssr] (ecmascript) <locals>");
@@ -32,10 +36,16 @@ var __TURBOPACK__imported__module__$5b$externals$5d2f$buffer__$5b$external$5d$__
 ;
 ;
 ;
-const PROGRAM_ID = new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$web3$2e$js$2f$lib$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PublicKey"]('KrealMomentXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
+const PROGRAM_ID = new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$web3$2e$js$2f$lib$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PublicKey"]('7iLFBYxQFx4QL9GHmeh6ELJBiizavd7dTWxi1sQNjsJ5');
+const DAO_TREASURY_ADDRESS = new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$web3$2e$js$2f$lib$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PublicKey"]('11111111111111111111111111111111');
+const IPFS_GATEWAYS = [
+    ("TURBOPACK compile-time value", "https://gateway.pinata.cloud/ipfs/") || 'https://gateway.pinata.cloud/ipfs/',
+    'https://cloudflare-ipfs.com/ipfs/',
+    'https://ipfs.io/ipfs/'
+];
 const getConnection = ()=>{
-    const apiKey = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
-    const endpoint = apiKey ? `https://devnet.helius-rpc.com/?api-key=${apiKey}` : (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$web3$2e$js$2f$lib$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["clusterApiUrl"])('devnet');
+    const apiKey = ("TURBOPACK compile-time value", "beddf993-861a-4653-a5f7-501a5fc27e66");
+    const endpoint = ("TURBOPACK compile-time truthy", 1) ? `https://devnet.helius-rpc.com/?api-key=${apiKey}` : "TURBOPACK unreachable";
     return new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$web3$2e$js$2f$lib$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Connection"](endpoint, 'confirmed');
 };
 const getProvider = (wallet)=>{
@@ -44,26 +54,64 @@ const getProvider = (wallet)=>{
 };
 const getProgram = (wallet, idl)=>{
     const provider = getProvider(wallet);
-    // Address must be in IDL or passed to Program constructor (Anchor 0.30+)
-    const idlWithAddress = {
-        ...idl,
-        address: PROGRAM_ID.toBase58(),
-        metadata: {
-            ...idl.metadata || {},
-            address: PROGRAM_ID.toBase58()
-        }
-    };
-    return new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$coral$2d$xyz$2f$anchor$2f$dist$2f$esm$2f$program$2f$index$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Program"](idlWithAddress, provider);
+    console.log("Initializing Program with IDL:", {
+        hasAccounts: !!idl.accounts,
+        hasTypes: !!idl.types,
+        accountsLength: idl.accounts?.length,
+        typesLength: idl.types?.length,
+        idlKeys: Object.keys(idl)
+    });
+    if (idl.accounts && !idl.types) {
+        console.warn("IDL has accounts but missing types! Attempting to fix...");
+        idl.types = []; // Polyfill if missing to avoid throwing
+    }
+    return new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$coral$2d$xyz$2f$anchor$2f$dist$2f$esm$2f$program$2f$index$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Program"](idl, provider);
+};
+const verifyReality = async (timestamp)=>{
+    const now = Date.now();
+    const drift = Math.abs(now - timestamp);
+    // Rule 1: Freshness - Must be within 10 minutes
+    if (drift > 10 * 60 * 1000) {
+        throw new Error("Memory is too stale. Must be minted within 10 minutes of capture.");
+    }
+    // Rule 2: Protocol Integrity - Ensure it's not a screencap or emulator
+    if (("TURBOPACK compile-time value", "undefined") !== 'undefined' && 'navigator' in window) //TURBOPACK unreachable
+    ;
+    return true;
 };
 const generateImageHash = async (imageBlob)=>{
     const arrayBuffer = await imageBlob.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
     return new Uint8Array(hashBuffer);
 };
-const uploadToIPFS = async (_imageBlob)=>{
-    console.log("Mocking IPFS upload...");
-    // Return a mock CID for development
-    return "Qm" + Math.random().toString(36).substring(2, 46);
+const uploadToIPFS = async (imageBlob)=>{
+    const jwt = ("TURBOPACK compile-time value", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJkM2E2NzZkZC0zN2Y5LTQ4OGUtOTExYS1lMjM2MGRmMzQyZWQiLCJlbWFpbCI6ImdvcmdlZC1leGVzLWdhcmRlbkBkdWNrLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiI4MWUzZDE4MjgzMjY3N2ExZjBhOSIsInNjb3BlZEtleVNlY3JldCI6IjM3ZDFlYWQ2ODI1Njc0OTI4ODY0ZDJlMjgxMTZjYjlmNzNmNmY2MTMwNjhiMGZkMTM4ZTEzNjg2NWQwMTExNjEiLCJleHAiOjE4MDMwOTg2MTV9.0IuqiGe-ba8wY3QpKG7Kn_NOd_fS2PP3eYy1i9n2tRA");
+    if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
+    ;
+    const formData = new FormData();
+    formData.append('file', imageBlob);
+    const metadata = JSON.stringify({
+        name: `KeepItReal_${Date.now()}.jpg`
+    });
+    formData.append('pinataMetadata', metadata);
+    const options = JSON.stringify({
+        cidVersion: 1
+    });
+    formData.append('pinataOptions', options);
+    try {
+        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${jwt}`
+            },
+            body: formData
+        });
+        const resData = await res.json();
+        return resData.IpfsHash;
+    } catch (error) {
+        console.error("Error uploading to Pinata:", error);
+        throw new Error("IPFS upload failed");
+    }
 };
 const fetchUserMemories = async (wallet, idl)=>{
     const program = getProgram(wallet, idl);
@@ -84,8 +132,8 @@ const fetchUserMemories = async (wallet, idl)=>{
                 hash: __TURBOPACK__imported__module__$5b$externals$5d2f$buffer__$5b$external$5d$__$28$buffer$2c$__cjs$29$__["Buffer"].from(m.account.imageHash).toString('hex'),
                 cid: m.account.ipfsCid,
                 timestamp: m.account.timestamp.toNumber(),
-                // URL reconstructed from IPFS gateway
-                url: `https://gateway.pinata.cloud/ipfs/${m.account.ipfsCid}`,
+                // URL with Redundancy Logic
+                url: `${IPFS_GATEWAYS[0]}${m.account.ipfsCid}`,
                 isMinted: true,
                 rotation: (Math.random() - 0.5) * 10
             }));
@@ -162,12 +210,12 @@ const HomeScreen = ({ setScreen, galleryLength, connected, publicKey, disconnect
                             className: "w-full aspect-square bg-[#EFE9E1]"
                         }, void 0, false, {
                             fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                            lineNumber: 37,
+                            lineNumber: 36,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0))
                     }, void 0, false, {
                         fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                        lineNumber: 36,
+                        lineNumber: 35,
                         columnNumber: 17
                     }, ("TURBOPACK compile-time value", void 0)),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -176,12 +224,12 @@ const HomeScreen = ({ setScreen, galleryLength, connected, publicKey, disconnect
                             className: "w-full aspect-square bg-[#EAE3D9]"
                         }, void 0, false, {
                             fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                            lineNumber: 40,
+                            lineNumber: 39,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0))
                     }, void 0, false, {
                         fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                        lineNumber: 39,
+                        lineNumber: 38,
                         columnNumber: 17
                     }, ("TURBOPACK compile-time value", void 0)),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -190,18 +238,18 @@ const HomeScreen = ({ setScreen, galleryLength, connected, publicKey, disconnect
                             className: "w-full aspect-square bg-[#F1EBE2]"
                         }, void 0, false, {
                             fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                            lineNumber: 43,
+                            lineNumber: 42,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0))
                     }, void 0, false, {
                         fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                        lineNumber: 42,
+                        lineNumber: 41,
                         columnNumber: 17
                     }, ("TURBOPACK compile-time value", void 0))
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                lineNumber: 35,
+                lineNumber: 34,
                 columnNumber: 13
             }, ("TURBOPACK compile-time value", void 0)),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -216,7 +264,7 @@ const HomeScreen = ({ setScreen, galleryLength, connected, publicKey, disconnect
                                 className: "w-48 h-auto mb-6 opacity-90 drop-shadow-sm"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                lineNumber: 49,
+                                lineNumber: 48,
                                 columnNumber: 21
                             }, ("TURBOPACK compile-time value", void 0)),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -226,7 +274,7 @@ const HomeScreen = ({ setScreen, galleryLength, connected, publicKey, disconnect
                                         className: "h-[1px] w-4 bg-[#D9D4CC]"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                        lineNumber: 51,
+                                        lineNumber: 50,
                                         columnNumber: 25
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -234,26 +282,26 @@ const HomeScreen = ({ setScreen, galleryLength, connected, publicKey, disconnect
                                         children: "Authentic Memories"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                        lineNumber: 52,
+                                        lineNumber: 51,
                                         columnNumber: 25
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         className: "h-[1px] w-4 bg-[#D9D4CC]"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                        lineNumber: 53,
+                                        lineNumber: 52,
                                         columnNumber: 25
                                     }, ("TURBOPACK compile-time value", void 0))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                lineNumber: 50,
+                                lineNumber: 49,
                                 columnNumber: 21
                             }, ("TURBOPACK compile-time value", void 0))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                        lineNumber: 48,
+                        lineNumber: 47,
                         columnNumber: 17
                     }, ("TURBOPACK compile-time value", void 0)),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -268,14 +316,14 @@ const HomeScreen = ({ setScreen, galleryLength, connected, publicKey, disconnect
                                         strokeWidth: 2.5
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                        lineNumber: 62,
+                                        lineNumber: 61,
                                         columnNumber: 25
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     " Capture Real Moment"
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                lineNumber: 58,
+                                lineNumber: 57,
                                 columnNumber: 21
                             }, ("TURBOPACK compile-time value", void 0)),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -285,12 +333,12 @@ const HomeScreen = ({ setScreen, galleryLength, connected, publicKey, disconnect
                                     children: "“Only real-time photos allowed”"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                    lineNumber: 66,
+                                    lineNumber: 65,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0))
                             }, void 0, false, {
                                 fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                lineNumber: 65,
+                                lineNumber: 64,
                                 columnNumber: 21
                             }, ("TURBOPACK compile-time value", void 0)),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -304,7 +352,7 @@ const HomeScreen = ({ setScreen, galleryLength, connected, publicKey, disconnect
                                             size: 14
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                            lineNumber: 75,
+                                            lineNumber: 74,
                                             columnNumber: 29
                                         }, ("TURBOPACK compile-time value", void 0)),
                                         " View Scrapbook (",
@@ -313,18 +361,18 @@ const HomeScreen = ({ setScreen, galleryLength, connected, publicKey, disconnect
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                    lineNumber: 70,
+                                    lineNumber: 69,
                                     columnNumber: 25
                                 }, ("TURBOPACK compile-time value", void 0))
                             }, void 0, false, {
                                 fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                lineNumber: 69,
+                                lineNumber: 68,
                                 columnNumber: 21
                             }, ("TURBOPACK compile-time value", void 0))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                        lineNumber: 57,
+                        lineNumber: 56,
                         columnNumber: 17
                     }, ("TURBOPACK compile-time value", void 0)),
                     connected && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -337,7 +385,7 @@ const HomeScreen = ({ setScreen, galleryLength, connected, publicKey, disconnect
                                         className: "w-1.5 h-1.5 bg-[#3FA37C] rounded-full animate-pulse"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                        lineNumber: 83,
+                                        lineNumber: 82,
                                         columnNumber: 29
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -349,13 +397,13 @@ const HomeScreen = ({ setScreen, galleryLength, connected, publicKey, disconnect
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                        lineNumber: 84,
+                                        lineNumber: 83,
                                         columnNumber: 29
                                     }, ("TURBOPACK compile-time value", void 0))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                lineNumber: 82,
+                                lineNumber: 81,
                                 columnNumber: 25
                             }, ("TURBOPACK compile-time value", void 0)),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -364,25 +412,25 @@ const HomeScreen = ({ setScreen, galleryLength, connected, publicKey, disconnect
                                 children: "Log Out Identity"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                                lineNumber: 88,
+                                lineNumber: 87,
                                 columnNumber: 25
                             }, ("TURBOPACK compile-time value", void 0))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                        lineNumber: 81,
+                        lineNumber: 80,
                         columnNumber: 21
                     }, ("TURBOPACK compile-time value", void 0))
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/screens/HomeScreen.tsx",
-                lineNumber: 47,
+                lineNumber: 46,
                 columnNumber: 13
             }, ("TURBOPACK compile-time value", void 0))
         ]
     }, "home", true, {
         fileName: "[project]/src/components/screens/HomeScreen.tsx",
-        lineNumber: 27,
+        lineNumber: 26,
         columnNumber: 9
     }, ("TURBOPACK compile-time value", void 0));
 };
@@ -757,38 +805,69 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$HandwrittenCaption$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/HandwrittenCaption.tsx [app-ssr] (ecmascript)");
 ;
 ;
-const PolaroidCard = ({ imageSrc, caption = "", isDeveloping = false, timestamp, isMinted = false, rotation = (Math.random() - 0.5) * 4, className = "", onCaptionChange, editable = false })=>{
+const PolaroidCard = ({ imageSrc, caption = "", isDeveloping = false, timestamp, isMinted = false, isPending = false, rotation = (Math.random() - 0.5) * 4, className = "", onCaptionChange, editable = false })=>{
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-        className: `polaroid-card paper-texture transition-transform duration-500 scale-100 hover:scale-[1.02] ${className}`,
+        className: `polaroid-card paper-texture transition-transform duration-500 scale-100 hover:scale-[1.02] ${className} ${isPending ? 'opacity-90' : ''}`,
         style: {
             transform: `rotate(${rotation}deg)`,
             boxShadow: `0 20px 40px -10px rgba(0,0,0,0.1), 0 10px 20px -5px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.02)`
         },
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                className: "polaroid-image-container",
+                className: "polaroid-image-container relative",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
                         src: imageSrc,
-                        className: `w-full h-full object-cover ${isDeveloping ? 'developing-effect' : ''}`,
+                        className: `w-full h-full object-cover ${isDeveloping ? 'developing-effect' : ''} ${isPending ? 'grayscale-[20%] blur-[0.5px]' : ''}`,
                         alt: "Moment"
                     }, void 0, false, {
                         fileName: "[project]/src/components/PolaroidCard.tsx",
-                        lineNumber: 36,
+                        lineNumber: 38,
                         columnNumber: 9
                     }, ("TURBOPACK compile-time value", void 0)),
+                    isPending && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[1px]",
+                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "flex items-center gap-2 px-3 py-1 bg-white/80 rounded-full shadow-sm animate-pulse border border-[#3FA37C]/20",
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "w-1.5 h-1.5 bg-[#3FA37C] rounded-full"
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/PolaroidCard.tsx",
+                                    lineNumber: 47,
+                                    columnNumber: 15
+                                }, ("TURBOPACK compile-time value", void 0)),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                    className: "text-[8px] font-black uppercase tracking-[0.2em] text-[#3FA37C]",
+                                    children: "Syncing Reality"
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/PolaroidCard.tsx",
+                                    lineNumber: 48,
+                                    columnNumber: 15
+                                }, ("TURBOPACK compile-time value", void 0))
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/src/components/PolaroidCard.tsx",
+                            lineNumber: 46,
+                            columnNumber: 13
+                        }, ("TURBOPACK compile-time value", void 0))
+                    }, void 0, false, {
+                        fileName: "[project]/src/components/PolaroidCard.tsx",
+                        lineNumber: 45,
+                        columnNumber: 11
+                    }, ("TURBOPACK compile-time value", void 0)),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: `verified-stamp ${isMinted ? 'active' : ''}`,
+                        className: `verified-stamp ${isMinted && !isPending ? 'active' : ''}`,
                         children: "Verified"
                     }, void 0, false, {
                         fileName: "[project]/src/components/PolaroidCard.tsx",
-                        lineNumber: 41,
+                        lineNumber: 53,
                         columnNumber: 9
                     }, ("TURBOPACK compile-time value", void 0))
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/PolaroidCard.tsx",
-                lineNumber: 35,
+                lineNumber: 37,
                 columnNumber: 7
             }, ("TURBOPACK compile-time value", void 0)),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -801,14 +880,14 @@ const PolaroidCard = ({ imageSrc, caption = "", isDeveloping = false, timestamp,
                         className: "w-full"
                     }, void 0, false, {
                         fileName: "[project]/src/components/PolaroidCard.tsx",
-                        lineNumber: 48,
+                        lineNumber: 60,
                         columnNumber: 11
                     }, ("TURBOPACK compile-time value", void 0)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                         className: "font-typewriter text-xl text-[#2A2A2A] text-center min-h-[1.2rem] leading-relaxed break-words w-full px-2 opacity-90",
                         children: caption
                     }, void 0, false, {
                         fileName: "[project]/src/components/PolaroidCard.tsx",
-                        lineNumber: 55,
+                        lineNumber: 67,
                         columnNumber: 11
                     }, ("TURBOPACK compile-time value", void 0)),
                     timestamp && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -823,19 +902,19 @@ const PolaroidCard = ({ imageSrc, caption = "", isDeveloping = false, timestamp,
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/PolaroidCard.tsx",
-                        lineNumber: 61,
+                        lineNumber: 73,
                         columnNumber: 11
                     }, ("TURBOPACK compile-time value", void 0))
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/PolaroidCard.tsx",
-                lineNumber: 46,
+                lineNumber: 58,
                 columnNumber: 7
             }, ("TURBOPACK compile-time value", void 0))
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/PolaroidCard.tsx",
-        lineNumber: 28,
+        lineNumber: 30,
         columnNumber: 5
     }, ("TURBOPACK compile-time value", void 0));
 };
@@ -1376,10 +1455,10 @@ const COLORS = {
     accent: '#A0522D'
 };
 const MINT_MESSAGES = [
-    "Capturing the essence...",
-    "Hashing pixels into truth...",
-    "Securing memory on chain...",
-    "Authenticity verified."
+    "Securing memory...",
+    "Encoding reality...",
+    "Waiting for identity approval...",
+    "Memory locked forever."
 ];
 }),
 "[project]/src/components/screens/MintingScreen.tsx [app-ssr] (ecmascript)", ((__turbopack_context__) => {
@@ -1392,6 +1471,7 @@ __turbopack_context__.s([
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react-jsx-dev-runtime.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/framer-motion/dist/es/render/components/motion/proxy.mjs [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$shield$2d$check$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ShieldCheck$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/shield-check.js [app-ssr] (ecmascript) <export default as ShieldCheck>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/check.js [app-ssr] (ecmascript) <export default as Check>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$constants$2f$index$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/constants/index.ts [app-ssr] (ecmascript)");
 'use client';
 ;
@@ -1421,11 +1501,50 @@ const MintingScreen = ({ mintStatus })=>{
                         columnNumber: 17
                     }, ("TURBOPACK compile-time value", void 0)),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "absolute inset-4 bg-white/40 backdrop-blur-md rounded-full shadow-2xl flex items-center justify-center border border-white",
-                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$shield$2d$check$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ShieldCheck$3e$__["ShieldCheck"], {
-                            size: 48,
-                            className: "text-[#3FA37C] animate-pulse"
-                        }, void 0, false, {
+                        className: "absolute inset-4 bg-white/40 backdrop-blur-md rounded-full shadow-2xl flex items-center justify-center border border-white overflow-hidden",
+                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
+                            initial: {
+                                scale: 0.5,
+                                opacity: 0
+                            },
+                            animate: {
+                                scale: 1,
+                                opacity: 1
+                            },
+                            transition: {
+                                type: "spring",
+                                stiffness: 200
+                            },
+                            children: mintStatus === 3 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
+                                initial: {
+                                    scale: 0
+                                },
+                                animate: {
+                                    scale: 1
+                                },
+                                className: "bg-[#3FA37C] p-4 rounded-full",
+                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
+                                    size: 32,
+                                    className: "text-white",
+                                    strokeWidth: 4
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/screens/MintingScreen.tsx",
+                                    lineNumber: 40,
+                                    columnNumber: 33
+                                }, ("TURBOPACK compile-time value", void 0))
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/screens/MintingScreen.tsx",
+                                lineNumber: 35,
+                                columnNumber: 29
+                            }, ("TURBOPACK compile-time value", void 0)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$shield$2d$check$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ShieldCheck$3e$__["ShieldCheck"], {
+                                size: 48,
+                                className: "text-[#3FA37C] animate-pulse"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/screens/MintingScreen.tsx",
+                                lineNumber: 43,
+                                columnNumber: 29
+                            }, ("TURBOPACK compile-time value", void 0))
+                        }, mintStatus === 3 ? 'success' : 'loading', false, {
                             fileName: "[project]/src/components/screens/MintingScreen.tsx",
                             lineNumber: 28,
                             columnNumber: 21
@@ -1439,7 +1558,7 @@ const MintingScreen = ({ mintStatus })=>{
                         className: "absolute -inset-2 bg-gradient-to-tr from-[#3FA37C]/20 to-transparent rounded-full animate-spin-slow"
                     }, void 0, false, {
                         fileName: "[project]/src/components/screens/MintingScreen.tsx",
-                        lineNumber: 31,
+                        lineNumber: 48,
                         columnNumber: 17
                     }, ("TURBOPACK compile-time value", void 0))
                 ]
@@ -1461,22 +1580,22 @@ const MintingScreen = ({ mintStatus })=>{
                 children: __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$constants$2f$index$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["MINT_MESSAGES"][mintStatus]
             }, mintStatus, false, {
                 fileName: "[project]/src/components/screens/MintingScreen.tsx",
-                lineNumber: 34,
+                lineNumber: 51,
                 columnNumber: 13
             }, ("TURBOPACK compile-time value", void 0)),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "flex flex-col items-center gap-2",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                        className: "text-[10px] uppercase tracking-[0.4em] text-[#A09E96] font-black",
-                        children: "Validating Reality on Solana"
+                        className: "text-[9px] uppercase tracking-[0.6em] text-[#3FA37C] font-black",
+                        children: "Certified on Solana"
                     }, void 0, false, {
                         fileName: "[project]/src/components/screens/MintingScreen.tsx",
-                        lineNumber: 43,
+                        lineNumber: 60,
                         columnNumber: 17
                     }, ("TURBOPACK compile-time value", void 0)),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "h-1 w-24 bg-[#D9D4CC] rounded-full overflow-hidden",
+                        className: "h-[1px] w-32 bg-[#D9D4CC] mt-2 relative overflow-hidden",
                         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
                             initial: {
                                 x: "-100%"
@@ -1491,18 +1610,18 @@ const MintingScreen = ({ mintStatus })=>{
                             className: "w-full h-full bg-[#3FA37C]"
                         }, void 0, false, {
                             fileName: "[project]/src/components/screens/MintingScreen.tsx",
-                            lineNumber: 45,
+                            lineNumber: 62,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0))
                     }, void 0, false, {
                         fileName: "[project]/src/components/screens/MintingScreen.tsx",
-                        lineNumber: 44,
+                        lineNumber: 61,
                         columnNumber: 17
                     }, ("TURBOPACK compile-time value", void 0))
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/screens/MintingScreen.tsx",
-                lineNumber: 42,
+                lineNumber: 59,
                 columnNumber: 13
             }, ("TURBOPACK compile-time value", void 0))
         ]
@@ -2053,11 +2172,25 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
                                     src: photo.url,
                                     alt: photo.caption,
-                                    className: "w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                    className: `w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 ${photo.isPending ? 'grayscale blur-[1px] opacity-70' : ''}`
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
                                     lineNumber: 90,
                                     columnNumber: 33
+                                }, ("TURBOPACK compile-time value", void 0)),
+                                photo.isPending && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "absolute inset-0 flex items-center justify-center",
+                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "w-1.5 h-1.5 bg-[#3FA37C] rounded-full animate-pulse"
+                                    }, void 0, false, {
+                                        fileName: "[project]/src/components/screens/GalleryScreen.tsx",
+                                        lineNumber: 97,
+                                        columnNumber: 41
+                                    }, ("TURBOPACK compile-time value", void 0))
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/screens/GalleryScreen.tsx",
+                                    lineNumber: 96,
+                                    columnNumber: 37
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     className: "absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center",
@@ -2066,12 +2199,12 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                         className: "text-white"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                        lineNumber: 96,
+                                        lineNumber: 101,
                                         columnNumber: 37
                                     }, ("TURBOPACK compile-time value", void 0))
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                    lineNumber: 95,
+                                    lineNumber: 100,
                                     columnNumber: 33
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
@@ -2093,12 +2226,12 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                 size: 32
                             }, void 0, false, {
                                 fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                lineNumber: 104,
+                                lineNumber: 109,
                                 columnNumber: 29
                             }, ("TURBOPACK compile-time value", void 0))
                         }, void 0, false, {
                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                            lineNumber: 103,
+                            lineNumber: 108,
                             columnNumber: 25
                         }, ("TURBOPACK compile-time value", void 0)),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2106,13 +2239,13 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                             children: "No memories captured yet"
                         }, void 0, false, {
                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                            lineNumber: 106,
+                            lineNumber: 111,
                             columnNumber: 25
                         }, ("TURBOPACK compile-time value", void 0))
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                    lineNumber: 102,
+                    lineNumber: 107,
                     columnNumber: 21
                 }, ("TURBOPACK compile-time value", void 0))
             }, void 0, false, {
@@ -2143,12 +2276,12 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                         size: 20
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                        lineNumber: 126,
+                                        lineNumber: 131,
                                         columnNumber: 33
                                     }, ("TURBOPACK compile-time value", void 0))
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                    lineNumber: 122,
+                                    lineNumber: 127,
                                     columnNumber: 29
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2156,14 +2289,14 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                             className: "text-[10px] uppercase tracking-[0.3em] font-bold text-white/60",
-                                            children: new Date(gallery[selectedPhotoIndex].timestamp).toLocaleDateString(undefined, {
+                                            children: new Date(gallery[selectedPhotoIndex].timestamp || Date.now()).toLocaleDateString(undefined, {
                                                 month: 'long',
                                                 day: 'numeric',
                                                 year: 'numeric'
                                             })
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                            lineNumber: 130,
+                                            lineNumber: 135,
                                             columnNumber: 33
                                         }, ("TURBOPACK compile-time value", void 0)),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2171,13 +2304,13 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                             children: gallery[selectedPhotoIndex].location.label || 'Unknown Reality'
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                            lineNumber: 133,
+                                            lineNumber: 138,
                                             columnNumber: 33
                                         }, ("TURBOPACK compile-time value", void 0))
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                    lineNumber: 129,
+                                    lineNumber: 134,
                                     columnNumber: 29
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2187,18 +2320,18 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                         size: 18
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                        lineNumber: 142,
+                                        lineNumber: 147,
                                         columnNumber: 33
                                     }, ("TURBOPACK compile-time value", void 0))
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                    lineNumber: 138,
+                                    lineNumber: 143,
                                     columnNumber: 29
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                            lineNumber: 121,
+                            lineNumber: 126,
                             columnNumber: 25
                         }, ("TURBOPACK compile-time value", void 0)),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2212,12 +2345,12 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                         size: 24
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                        lineNumber: 153,
+                                        lineNumber: 158,
                                         columnNumber: 33
                                     }, ("TURBOPACK compile-time value", void 0))
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                    lineNumber: 148,
+                                    lineNumber: 153,
                                     columnNumber: 29
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -2248,16 +2381,17 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                     children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$PolaroidCard$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PolaroidCard"], {
                                         ...gallery[selectedPhotoIndex],
                                         imageSrc: gallery[selectedPhotoIndex].url,
-                                        isMinted: true,
+                                        isMinted: gallery[selectedPhotoIndex].isMinted,
+                                        isPending: gallery[selectedPhotoIndex].isPending,
                                         className: "mx-auto shadow-[0_50px_100px_rgba(0,0,0,0.5)] rotate-0"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                        lineNumber: 171,
+                                        lineNumber: 176,
                                         columnNumber: 33
                                     }, ("TURBOPACK compile-time value", void 0))
                                 }, gallery[selectedPhotoIndex].id, false, {
                                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                    lineNumber: 156,
+                                    lineNumber: 161,
                                     columnNumber: 29
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2268,18 +2402,18 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                         size: 24
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                        lineNumber: 184,
+                                        lineNumber: 190,
                                         columnNumber: 33
                                     }, ("TURBOPACK compile-time value", void 0))
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                    lineNumber: 179,
+                                    lineNumber: 185,
                                     columnNumber: 29
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                            lineNumber: 147,
+                            lineNumber: 152,
                             columnNumber: 25
                         }, ("TURBOPACK compile-time value", void 0)),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2294,12 +2428,12 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                                 size: 20
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                                lineNumber: 192,
+                                                lineNumber: 198,
                                                 columnNumber: 37
                                             }, ("TURBOPACK compile-time value", void 0))
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                            lineNumber: 191,
+                                            lineNumber: 197,
                                             columnNumber: 33
                                         }, ("TURBOPACK compile-time value", void 0)),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2307,13 +2441,13 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                             children: "Save"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                            lineNumber: 194,
+                                            lineNumber: 200,
                                             columnNumber: 33
                                         }, ("TURBOPACK compile-time value", void 0))
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                    lineNumber: 190,
+                                    lineNumber: 196,
                                     columnNumber: 29
                                 }, ("TURBOPACK compile-time value", void 0)),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2326,12 +2460,12 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                                 size: 20
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                                lineNumber: 201,
+                                                lineNumber: 207,
                                                 columnNumber: 37
                                             }, ("TURBOPACK compile-time value", void 0))
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                            lineNumber: 197,
+                                            lineNumber: 203,
                                             columnNumber: 33
                                         }, ("TURBOPACK compile-time value", void 0)),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2339,30 +2473,30 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                             children: "Share"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                            lineNumber: 203,
+                                            lineNumber: 209,
                                             columnNumber: 33
                                         }, ("TURBOPACK compile-time value", void 0))
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                    lineNumber: 196,
+                                    lineNumber: 202,
                                     columnNumber: 29
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                            lineNumber: 189,
+                            lineNumber: 195,
                             columnNumber: 25
                         }, ("TURBOPACK compile-time value", void 0))
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                    lineNumber: 114,
+                    lineNumber: 119,
                     columnNumber: 21
                 }, ("TURBOPACK compile-time value", void 0))
             }, void 0, false, {
                 fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                lineNumber: 112,
+                lineNumber: 117,
                 columnNumber: 13
             }, ("TURBOPACK compile-time value", void 0)),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2381,7 +2515,7 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                             size: 18
                         }, void 0, false, {
                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                            lineNumber: 217,
+                            lineNumber: 223,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0)),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2389,18 +2523,18 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                             children: "Hold the Moment"
                         }, void 0, false, {
                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                            lineNumber: 218,
+                            lineNumber: 224,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0))
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                    lineNumber: 211,
+                    lineNumber: 217,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0))
             }, void 0, false, {
                 fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                lineNumber: 210,
+                lineNumber: 216,
                 columnNumber: 13
             }, ("TURBOPACK compile-time value", void 0))
         ]
@@ -2419,6 +2553,7 @@ __turbopack_context__.s([
     ()=>WalletScreen
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react-jsx-dev-runtime.js [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/framer-motion/dist/es/render/components/motion/proxy.mjs [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$wallet$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Wallet$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/wallet.js [app-ssr] (ecmascript) <export default as Wallet>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$wallet$2d$adapter$2d$react$2d$ui$2f$lib$2f$esm$2f$WalletMultiButton$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/@solana/wallet-adapter-react-ui/lib/esm/WalletMultiButton.js [app-ssr] (ecmascript)");
@@ -2429,7 +2564,13 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$Button$
 ;
 ;
 ;
+;
 const WalletScreen = ({ connected, setScreen })=>{
+    const [mounted, setMounted] = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"].useState(false);
+    __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"].useEffect(()=>{
+        setMounted(true);
+    }, []);
+    if (!mounted) return null;
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
         initial: {
             opacity: 0
@@ -2448,12 +2589,12 @@ const WalletScreen = ({ connected, setScreen })=>{
                         className: "text-[#FDFBF7]"
                     }, void 0, false, {
                         fileName: "[project]/src/components/screens/WalletScreen.tsx",
-                        lineNumber: 27,
+                        lineNumber: 35,
                         columnNumber: 21
                     }, ("TURBOPACK compile-time value", void 0))
                 }, void 0, false, {
                     fileName: "[project]/src/components/screens/WalletScreen.tsx",
-                    lineNumber: 26,
+                    lineNumber: 34,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
@@ -2461,7 +2602,7 @@ const WalletScreen = ({ connected, setScreen })=>{
                     children: "Keep It Real"
                 }, void 0, false, {
                     fileName: "[project]/src/components/screens/WalletScreen.tsx",
-                    lineNumber: 30,
+                    lineNumber: 38,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2469,23 +2610,23 @@ const WalletScreen = ({ connected, setScreen })=>{
                     children: "Your memories belong to your wallet identity."
                 }, void 0, false, {
                     fileName: "[project]/src/components/screens/WalletScreen.tsx",
-                    lineNumber: 31,
+                    lineNumber: 39,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                     className: "flex flex-col items-center gap-6",
                     children: !connected ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "w-full group",
+                        className: "w-full wallet-adapter-custom",
                         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$wallet$2d$adapter$2d$react$2d$ui$2f$lib$2f$esm$2f$WalletMultiButton$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["WalletMultiButton"], {
-                            className: "!bg-[#2A2A2A] hover:!bg-black !rounded-2xl !h-16 !w-full !flex !items-center !justify-center !font-bold !text-[11px] !uppercase !tracking-[0.2em] !transition-all !shadow-lg group-hover:!shadow-xl group-hover:!-translate-y-0.5"
+                            className: "!bg-[#2A2A2A] hover:!bg-black !rounded-2xl !h-16 !w-full !transition-all !shadow-lg"
                         }, void 0, false, {
                             fileName: "[project]/src/components/screens/WalletScreen.tsx",
-                            lineNumber: 38,
+                            lineNumber: 46,
                             columnNumber: 29
                         }, ("TURBOPACK compile-time value", void 0))
                     }, void 0, false, {
                         fileName: "[project]/src/components/screens/WalletScreen.tsx",
-                        lineNumber: 37,
+                        lineNumber: 45,
                         columnNumber: 25
                     }, ("TURBOPACK compile-time value", void 0)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
                         initial: {
@@ -2503,7 +2644,7 @@ const WalletScreen = ({ connected, setScreen })=>{
                                 children: "Identity Verified"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/screens/WalletScreen.tsx",
-                                lineNumber: 46,
+                                lineNumber: 54,
                                 columnNumber: 29
                             }, ("TURBOPACK compile-time value", void 0)),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$Button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -2512,18 +2653,18 @@ const WalletScreen = ({ connected, setScreen })=>{
                                 children: "Enter Reality"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/screens/WalletScreen.tsx",
-                                lineNumber: 49,
+                                lineNumber: 57,
                                 columnNumber: 29
                             }, ("TURBOPACK compile-time value", void 0))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/screens/WalletScreen.tsx",
-                        lineNumber: 41,
+                        lineNumber: 49,
                         columnNumber: 25
                     }, ("TURBOPACK compile-time value", void 0))
                 }, void 0, false, {
                     fileName: "[project]/src/components/screens/WalletScreen.tsx",
-                    lineNumber: 35,
+                    lineNumber: 43,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2533,30 +2674,30 @@ const WalletScreen = ({ connected, setScreen })=>{
                         children: "Devnet / Authenticated Proof"
                     }, void 0, false, {
                         fileName: "[project]/src/components/screens/WalletScreen.tsx",
-                        lineNumber: 60,
+                        lineNumber: 68,
                         columnNumber: 21
                     }, ("TURBOPACK compile-time value", void 0))
                 }, void 0, false, {
                     fileName: "[project]/src/components/screens/WalletScreen.tsx",
-                    lineNumber: 59,
+                    lineNumber: 67,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0))
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/screens/WalletScreen.tsx",
-            lineNumber: 25,
+            lineNumber: 33,
             columnNumber: 13
         }, ("TURBOPACK compile-time value", void 0))
     }, "wallet", false, {
         fileName: "[project]/src/components/screens/WalletScreen.tsx",
-        lineNumber: 19,
+        lineNumber: 27,
         columnNumber: 9
     }, ("TURBOPACK compile-time value", void 0));
 };
 }),
 "[project]/src/idl.json (json)", ((__turbopack_context__) => {
 
-__turbopack_context__.v({"version":"0.1.0","name":"keep_it_real","instructions":[{"name":"mintMemory","accounts":[{"name":"realityProof","isMut":true,"isSigner":false},{"name":"user","isMut":true,"isSigner":true},{"name":"systemProgram","isMut":false,"isSigner":false}],"args":[{"name":"imageHash","type":{"array":["u8",32]}},{"name":"ipfsCid","type":"string"},{"name":"appSignature","type":{"array":["u8",64]}},{"name":"timestamp","type":"i64"}]},{"name":"revokeMemory","accounts":[{"name":"realityProof","isMut":true,"isSigner":false},{"name":"user","isMut":true,"isSigner":true},{"name":"systemProgram","isMut":false,"isSigner":false}],"args":[]}],"accounts":[{"name":"RealityProof","type":{"kind":"struct","fields":[{"name":"owner","type":"publicKey"},{"name":"imageHash","type":{"array":["u8",32]}},{"name":"ipfsCid","type":"string"},{"name":"appSignature","type":{"array":["u8",64]}},{"name":"timestamp","type":"i64"},{"name":"isVerified","type":"bool"}]}}],"errors":[{"code":6000,"name":"CidTooLong","msg":"IPFS CID exceeds maximum length."}]});}),
+__turbopack_context__.v({"address":"7iLFBYxQFx4QL9GHmeh6ELJBiizavd7dTWxi1sQNjsJ5","metadata":{"name":"keep_it_real","version":"0.1.0","spec":"0.1.0","description":"Created with Anchor"},"instructions":[{"name":"mintMemory","discriminator":[13,175,116,95,164,199,151,15],"accounts":[{"name":"realityProof","writable":true,"signer":false},{"name":"user","writable":true,"signer":true},{"name":"daoTreasury","writable":true,"signer":false},{"name":"systemProgram","address":"11111111111111111111111111111111","writable":false,"signer":false}],"args":[{"name":"imageHash","type":{"array":["u8",32]}},{"name":"ipfsCid","type":"string"},{"name":"appSignature","type":{"array":["u8",64]}},{"name":"timestamp","type":"i64"}]},{"name":"revokeMemory","discriminator":[43,184,66,119,163,164,140,17],"accounts":[{"name":"realityProof","writable":true,"signer":false},{"name":"user","writable":true,"signer":true},{"name":"systemProgram","address":"11111111111111111111111111111111","writable":false,"signer":false}],"args":[]}],"accounts":[{"name":"RealityProof","discriminator":[245,170,92,135,16,21,150,154]}],"types":[{"name":"RealityProof","type":{"kind":"struct","fields":[{"name":"owner","type":"publicKey"},{"name":"imageHash","type":{"array":["u8",32]}},{"name":"ipfsCid","type":"string"},{"name":"appSignature","type":{"array":["u8",64]}},{"name":"timestamp","type":"i64"},{"name":"isVerified","type":"bool"}]}}],"errors":[{"code":6000,"name":"InvalidCid","msg":"IPFS CID is invalid or too long."},{"code":6001,"name":"TimeDriftTooLarge","msg":"The timestamp provided differs too much from on-chain time."}]});}),
 "[project]/src/app/page.tsx [app-ssr] (ecmascript)", ((__turbopack_context__) => {
 "use strict";
 
@@ -2721,6 +2862,7 @@ function Home() {
     };
     const mintPhoto = async ()=>{
         try {
+            const timestamp = Date.now();
             if (!connected || !publicKey) {
                 setScreen('wallet');
                 return;
@@ -2735,6 +2877,8 @@ function Home() {
                 alert("Photo data not found. Please try retaking the photo.");
                 return;
             }
+            // PHASE 3: Reality Capture Enforcement
+            await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$solana$2d$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["verifyReality"])(timestamp);
             setScreen('minting');
             setMintStatus(0);
             const photoHash = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$solana$2d$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["generateImageHash"])(activeBlob);
@@ -2743,38 +2887,10 @@ function Home() {
             const ipfsCid = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$solana$2d$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["uploadToIPFS"])(activeBlob);
             await new Promise((r)=>setTimeout(r, 800));
             setMintStatus(2);
-            // Real Wallet Signer for User Pays Gas model
-            const wallet = {
-                publicKey,
-                signTransaction,
-                signAllTransactions
-            };
-            const program = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$solana$2d$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getProgram"])(wallet, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$idl$2e$json__$28$json$29$__["default"]);
-            const timestamp = Date.now();
-            const [proofPDA] = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$web3$2e$js$2f$lib$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PublicKey"].findProgramAddressSync([
-                __TURBOPACK__imported__module__$5b$externals$5d2f$buffer__$5b$external$5d$__$28$buffer$2c$__cjs$29$__["Buffer"].from("memory"),
-                publicKey.toBuffer(),
-                __TURBOPACK__imported__module__$5b$externals$5d2f$buffer__$5b$external$5d$__$28$buffer$2c$__cjs$29$__["Buffer"].from(photoHash)
-            ], __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$solana$2d$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PROGRAM_ID"]);
-            console.log("On-chain sync triggered for PDA:", proofPDA.toBase58());
-            await new Promise((r)=>setTimeout(r, 1200));
-            setMintStatus(3);
-            // Actually call the Solana Program
-            try {
-                const appSignature = new Array(64).fill(0); // App-level verification (can be expanded later)
-                const tx = await program.methods.mintMemory(Array.from(photoHash), ipfsCid, appSignature, new program.anchor.BN(timestamp)).accounts({
-                    realityProof: proofPDA,
-                    user: publicKey,
-                    systemProgram: program.anchor.web3.SystemProgram.programId
-                }).rpc();
-                console.log("On-chain transaction successful! Sig:", tx);
-            } catch (rpcError) {
-                console.warn("RPC failed (could be due to already minted or devnet timeout), proceeding to local save:", rpcError);
-            // We proceed to save locally even if RPC fails in devnet to allow UI flow testing
-            }
-            await new Promise((r)=>setTimeout(r, 500));
-            const newPhoto = {
-                id: Math.random().toString(36).substr(2, 9),
+            // OPTIMISTIC UI: Save to local gallery before RPC call
+            const photoId = Math.random().toString(36).substr(2, 9);
+            const optimisticPhoto = {
+                id: photoId,
                 url: currentPhoto,
                 caption: tempCaption,
                 timestamp: includeDateTime ? timestamp : undefined,
@@ -2786,21 +2902,64 @@ function Home() {
                 },
                 hash: __TURBOPACK__imported__module__$5b$externals$5d2f$buffer__$5b$external$5d$__$28$buffer$2c$__cjs$29$__["Buffer"].from(photoHash).toString('hex'),
                 cid: ipfsCid,
-                isMinted: true,
+                isMinted: false,
+                isPending: true,
                 rotation: (Math.random() - 0.5) * 10,
                 owner: publicKey.toBase58()
             };
             setGallery((prev)=>[
-                    newPhoto,
+                    optimisticPhoto,
                     ...prev
                 ]);
+            // Real Wallet Signer for User Pays Gas model
+            const wallet = {
+                publicKey,
+                signTransaction,
+                signAllTransactions
+            };
+            const program = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$solana$2d$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getProgram"])(wallet, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$idl$2e$json__$28$json$29$__["default"]);
+            const [proofPDA] = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$web3$2e$js$2f$lib$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PublicKey"].findProgramAddressSync([
+                __TURBOPACK__imported__module__$5b$externals$5d2f$buffer__$5b$external$5d$__$28$buffer$2c$__cjs$29$__["Buffer"].from("memory"),
+                publicKey.toBuffer(),
+                __TURBOPACK__imported__module__$5b$externals$5d2f$buffer__$5b$external$5d$__$28$buffer$2c$__cjs$29$__["Buffer"].from(photoHash)
+            ], __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$solana$2d$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PROGRAM_ID"]);
+            console.log("On-chain sync triggered for PDA:", proofPDA.toBase58());
+            await new Promise((r)=>setTimeout(r, 1200));
+            setMintStatus(3);
+            // Successfully call the Solana Program
+            try {
+                const appSignature = new Array(64).fill(0); // App-level verification (can be expanded later)
+                const tx = await program.methods.mintMemory(Array.from(photoHash), ipfsCid, appSignature, new program.anchor.BN(timestamp)).accounts({
+                    realityProof: proofPDA,
+                    user: publicKey,
+                    daoTreasury: __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$solana$2d$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DAO_TREASURY_ADDRESS"],
+                    systemProgram: program.anchor.web3.SystemProgram.programId
+                }).rpc();
+                console.log("On-chain transaction successful! Sig:", tx);
+                // Update the pending photo to confirmed
+                setGallery((prev)=>prev.map((p)=>p.hash === __TURBOPACK__imported__module__$5b$externals$5d2f$buffer__$5b$external$5d$__$28$buffer$2c$__cjs$29$__["Buffer"].from(photoHash).toString('hex') ? {
+                            ...p,
+                            isPending: false,
+                            isMinted: true
+                        } : p));
+            } catch (rpcError) {
+                console.warn("RPC failed (could be due to already minted or devnet timeout), proceeding to local save:", rpcError);
+                // Mark as failed or just leave as is for local-only testing
+                setGallery((prev)=>prev.map((p)=>p.hash === __TURBOPACK__imported__module__$5b$externals$5d2f$buffer__$5b$external$5d$__$28$buffer$2c$__cjs$29$__["Buffer"].from(photoHash).toString('hex') ? {
+                            ...p,
+                            isPending: false,
+                            isMinted: false
+                        } : p));
+            }
+            await new Promise((r)=>setTimeout(r, 2000));
             setScreen('printing');
             setTimeout(()=>{
                 setScreen('success');
             }, 4000);
         } catch (error) {
-            alert("Verification failed: " + (error instanceof Error ? error.message : String(error)));
-            setScreen('metadata');
+            console.error("Reality verification failed:", error);
+            alert((error instanceof Error ? error.message : "Reality check failed") + ". Please capture a fresh memory.");
+            setScreen('camera');
         }
     };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2817,7 +2976,7 @@ function Home() {
                         disconnect: disconnect
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 244,
+                        lineNumber: 262,
                         columnNumber: 21
                     }, this),
                     screen === 'camera' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$CameraScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CameraScreen"], {
@@ -2829,7 +2988,7 @@ function Home() {
                         capturePhoto: capturePhoto
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 253,
+                        lineNumber: 271,
                         columnNumber: 21
                     }, this),
                     screen === 'preview' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$PreviewScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PreviewScreen"], {
@@ -2841,7 +3000,7 @@ function Home() {
                         setIncludeDateTime: setIncludeDateTime
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 263,
+                        lineNumber: 281,
                         columnNumber: 21
                     }, this),
                     screen === 'metadata' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$MetadataScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["MetadataScreen"], {
@@ -2850,14 +3009,14 @@ function Home() {
                         setScreen: setScreen
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 273,
+                        lineNumber: 291,
                         columnNumber: 21
                     }, this),
                     screen === 'minting' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$MintingScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["MintingScreen"], {
                         mintStatus: mintStatus
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 280,
+                        lineNumber: 298,
                         columnNumber: 21
                     }, this),
                     screen === 'printing' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$PrintingScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PrintingScreen"], {
@@ -2866,7 +3025,7 @@ function Home() {
                         includeDateTime: includeDateTime
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 283,
+                        lineNumber: 301,
                         columnNumber: 21
                     }, this),
                     screen === 'success' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$SuccessScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SuccessScreen"], {
@@ -2878,7 +3037,7 @@ function Home() {
                         includeDateTime: includeDateTime
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 286,
+                        lineNumber: 304,
                         columnNumber: 21
                     }, this),
                     screen === 'gallery' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$GalleryScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["GalleryScreen"], {
@@ -2886,7 +3045,7 @@ function Home() {
                         setScreen: setScreen
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 296,
+                        lineNumber: 314,
                         columnNumber: 21
                     }, this),
                     screen === 'wallet' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$WalletScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["WalletScreen"], {
@@ -2894,13 +3053,13 @@ function Home() {
                         setScreen: setScreen
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 299,
+                        lineNumber: 317,
                         columnNumber: 21
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/page.tsx",
-                lineNumber: 242,
+                lineNumber: 260,
                 columnNumber: 13
             }, this),
             isSyncing && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -2922,7 +3081,7 @@ function Home() {
                         className: "w-2 h-2 bg-[#3FA37C] rounded-full animate-pulse"
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 310,
+                        lineNumber: 328,
                         columnNumber: 21
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2930,19 +3089,19 @@ function Home() {
                         children: "Syncing memories..."
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 311,
+                        lineNumber: 329,
                         columnNumber: 21
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/page.tsx",
-                lineNumber: 304,
+                lineNumber: 322,
                 columnNumber: 17
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/page.tsx",
-        lineNumber: 241,
+        lineNumber: 259,
         columnNumber: 9
     }, this);
 }

@@ -129,7 +129,6 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$wallet$2d$adapter$2d$solflare$2f$lib$2f$esm$2f$adapter$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/@solana/wallet-adapter-solflare/lib/esm/adapter.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$wallet$2d$adapter$2d$react$2d$ui$2f$lib$2f$esm$2f$WalletModalProvider$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/@solana/wallet-adapter-react-ui/lib/esm/WalletModalProvider.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$web3$2e$js$2f$lib$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/@solana/web3.js/lib/index.esm.js [app-ssr] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$externals$5d2f$buffer__$5b$external$5d$__$28$buffer$2c$__cjs$29$__ = __turbopack_context__.i("[externals]/buffer [external] (buffer, cjs)");
 'use client';
 ;
 ;
@@ -139,16 +138,14 @@ var __TURBOPACK__imported__module__$5b$externals$5d2f$buffer__$5b$external$5d$__
 ;
 ;
 ;
-;
-if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
-;
 function SolanaProvider({ children }) {
     const network = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$wallet$2d$adapter$2d$base$2f$lib$2f$esm$2f$types$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["WalletAdapterNetwork"].Devnet;
     // Helius RPC is recommended for production-grade Devnet stability
     const endpoint = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useMemo"])(()=>{
-        const apiKey = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
-        if (apiKey) return `https://devnet.helius-rpc.com/?api-key=${apiKey}`;
-        return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$web3$2e$js$2f$lib$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["clusterApiUrl"])(network);
+        const apiKey = ("TURBOPACK compile-time value", "beddf993-861a-4653-a5f7-501a5fc27e66");
+        if ("TURBOPACK compile-time truthy", 1) return `https://devnet.helius-rpc.com/?api-key=${apiKey}`;
+        //TURBOPACK unreachable
+        ;
     }, [
         network
     ]);
@@ -156,26 +153,30 @@ function SolanaProvider({ children }) {
             new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$wallet$2d$adapter$2d$phantom$2f$lib$2f$esm$2f$adapter$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PhantomWalletAdapter"](),
             new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$wallet$2d$adapter$2d$solflare$2f$lib$2f$esm$2f$adapter$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SolflareWalletAdapter"]()
         ], []);
+    const onError = (error)=>{
+        console.error('Wallet Error:', error);
+    };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$wallet$2d$adapter$2d$react$2f$lib$2f$esm$2f$ConnectionProvider$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["ConnectionProvider"], {
         endpoint: endpoint,
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$wallet$2d$adapter$2d$react$2f$lib$2f$esm$2f$WalletProvider$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["WalletProvider"], {
             wallets: wallets,
             autoConnect: true,
+            onError: onError,
             children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$wallet$2d$adapter$2d$react$2d$ui$2f$lib$2f$esm$2f$WalletModalProvider$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["WalletModalProvider"], {
                 children: children
             }, void 0, false, {
                 fileName: "[project]/src/components/providers/SolanaProvider.tsx",
-                lineNumber: 37,
+                lineNumber: 39,
                 columnNumber: 17
             }, this)
         }, void 0, false, {
             fileName: "[project]/src/components/providers/SolanaProvider.tsx",
-            lineNumber: 36,
+            lineNumber: 38,
             columnNumber: 13
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/providers/SolanaProvider.tsx",
-        lineNumber: 35,
+        lineNumber: 37,
         columnNumber: 9
     }, this);
 }

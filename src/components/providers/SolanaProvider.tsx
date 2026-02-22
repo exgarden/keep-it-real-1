@@ -29,9 +29,13 @@ export function SolanaProvider({ children }: { children: React.ReactNode }) {
         []
     );
 
+    const onError = (error: any) => {
+        console.error('Wallet Error:', error);
+    };
+
     return (
         <ConnectionProvider endpoint={endpoint}>
-            <WalletProvider wallets={wallets} autoConnect>
+            <WalletProvider wallets={wallets} autoConnect onError={onError}>
                 <WalletModalProvider>
                     {children}
                 </WalletModalProvider>
