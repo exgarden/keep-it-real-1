@@ -194,6 +194,17 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                         {/* Footer Actions */}
                         <div className="p-8 pb-12 flex justify-center gap-8">
                             <div className="flex flex-col items-center gap-2">
+                                <a
+                                    href={`https://explorer.solana.com/address/${gallery[selectedPhotoIndex].id}?cluster=devnet`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-12 h-12 flex items-center justify-center rounded-full bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                                >
+                                    <ExternalLink size={20} />
+                                </a>
+                                <span className="text-[7px] uppercase tracking-widest text-white/40">Explorer</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-2">
                                 <button className="w-12 h-12 flex items-center justify-center rounded-full bg-white/5 text-white/60 hover:text-white transition-all">
                                     <Download size={20} />
                                 </button>

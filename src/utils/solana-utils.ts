@@ -281,7 +281,9 @@ export const fetchUserMemories = async ({ publicKey }: { publicKey: PublicKey },
                 owner: m.account.owner.toBase58(),
                 hash: Buffer.from(m.account.imageHash as any).toString('hex'),
                 cid: cid,
-                timestamp: (m.account.timestamp as any).toNumber(),
+                timestamp: metadata?.timestamp
+                    ? (metadata.timestamp < 10000000000 ? metadata.timestamp * 1000 : metadata.timestamp)
+                    : (m.account.timestamp as any).toNumber() * 1000,
                 // If we have metadata, use the image_cid from it, otherwise use the CID itself as the image
                 url: metadata
                     ? `${IPFS_GATEWAYS[0]}${metadata.image_cid}`

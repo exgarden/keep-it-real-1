@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey, SystemProgram } from '@solana/web3.js';
 import { Buffer } from 'buffer';
 import { AppScreen, PolaroidPhoto, CameraSettings, LocationData } from '@/types';
+import { BN } from '@coral-xyz/anchor';
 import { generateImageHash, uploadToIPFS, uploadMetadataToIPFS, getProgram, fetchUserMemories, PROGRAM_ID, DAO_TREASURY_ADDRESS, verifyReality } from '@/utils/solana-utils';
 
 import { HomeScreen } from '@/components/screens/HomeScreen';
@@ -158,6 +159,23 @@ export default function Home() {
                 return;
             }
 
+            // GUARD: Ensure wallet is on Devnet
+            try {
+                const { getConnection } = await import('@/utils/solana-utils');
+                const conn = getConnection();
+                const genesisHash = await conn.getGenesisHash();
+                // Mainnet genesis hash
+                const MAINNET_GENESIS = '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d';
+                if (genesisHash === MAINNET_GENESIS) {
+                    alert(
+                        '⚠️ Wrong Network!\n\nYour wallet is connected to Solana Mainnet, but Keep It Real runs on Devnet.\n\nPlease switch to Devnet in your wallet settings (Phantom: Settings → Developer Settings → Devnet).'
+                    );
+                    return;
+                }
+            } catch (_e) {
+                // If we can't check, continue anyway — the tx will fail naturally
+            }
+
             // PHASE 3: Reality Capture Enforcement
             await verifyReality(timestamp);
 
@@ -173,9 +191,11 @@ export default function Home() {
             await new Promise(r => setTimeout(r, 800));
 
             setMintStatus(2);
+            const timestampSeconds = Math.floor(timestamp / 1000);
+
             const metadataCid = await uploadMetadataToIPFS(imageCid, {
                 caption: tempCaption,
-                timestamp: timestamp,
+                timestamp: timestampSeconds,
                 location: includeLocation ? location : { latitude: null, longitude: null }
             });
             await new Promise(r => setTimeout(r, 800));
@@ -230,13 +250,13 @@ export default function Home() {
                         Array.from(photoHash),
                         metadataCid,
                         appSignature,
-                        new (program as any).anchor.BN(timestamp)
+                        new BN(timestampSeconds)
                     )
                     .accounts({
                         realityProof: proofPDA,
                         user: publicKey,
                         daoTreasury: DAO_TREASURY_ADDRESS,
-                        systemProgram: (program as any).anchor.web3.SystemProgram.programId,
+                        systemProgram: SystemProgram.programId,
                     })
                     .rpc();
 
@@ -249,13 +269,20 @@ export default function Home() {
                         : p
                 ));
             } catch (rpcError) {
-                console.warn("RPC failed (could be due to already minted or devnet timeout), proceeding to local save:", rpcError);
-                // Mark as failed or just leave as is for local-only testing
+                console.error("On-chain RPC failed:", rpcError);
+
+                // CRITICAL: Alert the user and update UI state
+                alert("Blockchain Sync Failed: " + (rpcError instanceof Error ? rpcError.message : "Possible rejection or network error. Check your wallet."));
+
                 setGallery(prev => prev.map(p =>
                     p.hash === Buffer.from(photoHash).toString('hex')
                         ? { ...p, isPending: false, isMinted: false }
                         : p
                 ));
+
+                // Return to camera or preview instead of showing success
+                setScreen('preview');
+                return;
             }
 
             await new Promise(r => setTimeout(r, 2000));

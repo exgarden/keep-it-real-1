@@ -380,7 +380,7 @@ const fetchUserMemories = async ({ publicKey }, idl = PROGRAM_IDL)=>{
                 owner: m.account.owner.toBase58(),
                 hash: __TURBOPACK__imported__module__$5b$externals$5d2f$buffer__$5b$external$5d$__$28$buffer$2c$__cjs$29$__["Buffer"].from(m.account.imageHash).toString('hex'),
                 cid: cid,
-                timestamp: m.account.timestamp.toNumber(),
+                timestamp: metadata?.timestamp ? metadata.timestamp < 10000000000 ? metadata.timestamp * 1000 : metadata.timestamp : m.account.timestamp.toNumber() * 1000,
                 // If we have metadata, use the image_cid from it, otherwise use the CID itself as the image
                 url: metadata ? `${IPFS_GATEWAYS[0]}${metadata.image_cid}` : `${IPFS_GATEWAYS[0]}${cid}`,
                 caption: metadata?.caption || "",
@@ -2678,13 +2678,16 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     className: "flex flex-col items-center gap-2",
                                     children: [
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                                            className: "w-12 h-12 flex items-center justify-center rounded-full bg-white/5 text-white/60 hover:text-white transition-all",
-                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$download$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Download$3e$__["Download"], {
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("a", {
+                                            href: `https://explorer.solana.com/address/${gallery[selectedPhotoIndex].id}?cluster=devnet`,
+                                            target: "_blank",
+                                            rel: "noopener noreferrer",
+                                            className: "w-12 h-12 flex items-center justify-center rounded-full bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all",
+                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$external$2d$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ExternalLink$3e$__["ExternalLink"], {
                                                 size: 20
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                                lineNumber: 198,
+                                                lineNumber: 203,
                                                 columnNumber: 37
                                             }, ("TURBOPACK compile-time value", void 0))
                                         }, void 0, false, {
@@ -2694,10 +2697,10 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                         }, ("TURBOPACK compile-time value", void 0)),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                             className: "text-[7px] uppercase tracking-widest text-white/40",
-                                            children: "Save"
+                                            children: "Explorer"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                            lineNumber: 200,
+                                            lineNumber: 205,
                                             columnNumber: 33
                                         }, ("TURBOPACK compile-time value", void 0))
                                     ]
@@ -2710,18 +2713,49 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                     className: "flex flex-col items-center gap-2",
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                            className: "w-12 h-12 flex items-center justify-center rounded-full bg-white/5 text-white/60 hover:text-white transition-all",
+                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$download$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Download$3e$__["Download"], {
+                                                size: 20
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/screens/GalleryScreen.tsx",
+                                                lineNumber: 209,
+                                                columnNumber: 37
+                                            }, ("TURBOPACK compile-time value", void 0))
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/screens/GalleryScreen.tsx",
+                                            lineNumber: 208,
+                                            columnNumber: 33
+                                        }, ("TURBOPACK compile-time value", void 0)),
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                            className: "text-[7px] uppercase tracking-widest text-white/40",
+                                            children: "Save"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/screens/GalleryScreen.tsx",
+                                            lineNumber: 211,
+                                            columnNumber: 33
+                                        }, ("TURBOPACK compile-time value", void 0))
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/screens/GalleryScreen.tsx",
+                                    lineNumber: 207,
+                                    columnNumber: 29
+                                }, ("TURBOPACK compile-time value", void 0)),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "flex flex-col items-center gap-2",
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                             onClick: ()=>handleShare(gallery[selectedPhotoIndex]),
                                             className: "w-12 h-12 flex items-center justify-center rounded-full bg-white text-black hover:bg-white/90 transition-all",
                                             children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$share$2d$2$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Share2$3e$__["Share2"], {
                                                 size: 20
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                                lineNumber: 207,
+                                                lineNumber: 218,
                                                 columnNumber: 37
                                             }, ("TURBOPACK compile-time value", void 0))
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                            lineNumber: 203,
+                                            lineNumber: 214,
                                             columnNumber: 33
                                         }, ("TURBOPACK compile-time value", void 0)),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2729,13 +2763,13 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                                             children: "Share"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                            lineNumber: 209,
+                                            lineNumber: 220,
                                             columnNumber: 33
                                         }, ("TURBOPACK compile-time value", void 0))
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                                    lineNumber: 202,
+                                    lineNumber: 213,
                                     columnNumber: 29
                                 }, ("TURBOPACK compile-time value", void 0))
                             ]
@@ -2771,7 +2805,7 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                             size: 18
                         }, void 0, false, {
                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                            lineNumber: 223,
+                            lineNumber: 234,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0)),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2779,18 +2813,18 @@ const GalleryScreen = ({ gallery, setScreen })=>{
                             children: "Hold the Moment"
                         }, void 0, false, {
                             fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                            lineNumber: 224,
+                            lineNumber: 235,
                             columnNumber: 21
                         }, ("TURBOPACK compile-time value", void 0))
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                    lineNumber: 217,
+                    lineNumber: 228,
                     columnNumber: 17
                 }, ("TURBOPACK compile-time value", void 0))
             }, void 0, false, {
                 fileName: "[project]/src/components/screens/GalleryScreen.tsx",
-                lineNumber: 216,
+                lineNumber: 227,
                 columnNumber: 13
             }, ("TURBOPACK compile-time value", void 0))
         ]
@@ -3000,6 +3034,8 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$mo
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$wallet$2d$adapter$2d$react$2f$lib$2f$esm$2f$useWallet$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/@solana/wallet-adapter-react/lib/esm/useWallet.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$web3$2e$js$2f$lib$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/@solana/web3.js/lib/index.esm.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$externals$5d2f$buffer__$5b$external$5d$__$28$buffer$2c$__cjs$29$__ = __turbopack_context__.i("[externals]/buffer [external] (buffer, cjs)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$coral$2d$xyz$2f$anchor$2f$dist$2f$esm$2f$index$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/node_modules/@coral-xyz/anchor/dist/esm/index.js [app-ssr] (ecmascript) <locals>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$bn$2e$js$2f$lib$2f$bn$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__BN$3e$__ = __turbopack_context__.i("[project]/node_modules/bn.js/lib/bn.js [app-ssr] (ecmascript) <export default as BN>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$solana$2d$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/utils/solana-utils.ts [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$HomeScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/screens/HomeScreen.tsx [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$CameraScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/screens/CameraScreen.tsx [app-ssr] (ecmascript)");
@@ -3011,6 +3047,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$GalleryScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/screens/GalleryScreen.tsx [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$WalletScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/screens/WalletScreen.tsx [app-ssr] (ecmascript)");
 'use client';
+;
 ;
 ;
 ;
@@ -3176,6 +3213,20 @@ function Home() {
                 alert("Photo data not found. Please try retaking the photo.");
                 return;
             }
+            // GUARD: Ensure wallet is on Devnet
+            try {
+                const { getConnection } = await __turbopack_context__.A("[project]/src/utils/solana-utils.ts [app-ssr] (ecmascript, async loader)");
+                const conn = getConnection();
+                const genesisHash = await conn.getGenesisHash();
+                // Mainnet genesis hash
+                const MAINNET_GENESIS = '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d';
+                if (genesisHash === MAINNET_GENESIS) {
+                    alert('⚠️ Wrong Network!\n\nYour wallet is connected to Solana Mainnet, but Keep It Real runs on Devnet.\n\nPlease switch to Devnet in your wallet settings (Phantom: Settings → Developer Settings → Devnet).');
+                    return;
+                }
+            } catch (_e) {
+            // If we can't check, continue anyway — the tx will fail naturally
+            }
             // PHASE 3: Reality Capture Enforcement
             await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$solana$2d$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["verifyReality"])(timestamp);
             setScreen('minting');
@@ -3186,9 +3237,10 @@ function Home() {
             const imageCid = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$solana$2d$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["uploadToIPFS"])(activeBlob);
             await new Promise((r)=>setTimeout(r, 800));
             setMintStatus(2);
+            const timestampSeconds = Math.floor(timestamp / 1000);
             const metadataCid = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$solana$2d$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["uploadMetadataToIPFS"])(imageCid, {
                 caption: tempCaption,
-                timestamp: timestamp,
+                timestamp: timestampSeconds,
                 location: includeLocation ? location : {
                     latitude: null,
                     longitude: null
@@ -3238,11 +3290,11 @@ function Home() {
             // Successfully call the Solana Program
             try {
                 const appSignature = new Array(64).fill(0); // App-level verification (can be expanded later)
-                const tx = await program.methods.mintMemory(Array.from(photoHash), metadataCid, appSignature, new program.anchor.BN(timestamp)).accounts({
+                const tx = await program.methods.mintMemory(Array.from(photoHash), metadataCid, appSignature, new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$bn$2e$js$2f$lib$2f$bn$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__BN$3e$__["BN"](timestampSeconds)).accounts({
                     realityProof: proofPDA,
                     user: publicKey,
                     daoTreasury: __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$solana$2d$utils$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DAO_TREASURY_ADDRESS"],
-                    systemProgram: program.anchor.web3.SystemProgram.programId
+                    systemProgram: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$solana$2f$web3$2e$js$2f$lib$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SystemProgram"].programId
                 }).rpc();
                 console.log("On-chain transaction successful! Sig:", tx);
                 // Update the pending photo to confirmed
@@ -3252,13 +3304,17 @@ function Home() {
                             isMinted: true
                         } : p));
             } catch (rpcError) {
-                console.warn("RPC failed (could be due to already minted or devnet timeout), proceeding to local save:", rpcError);
-                // Mark as failed or just leave as is for local-only testing
+                console.error("On-chain RPC failed:", rpcError);
+                // CRITICAL: Alert the user and update UI state
+                alert("Blockchain Sync Failed: " + (rpcError instanceof Error ? rpcError.message : "Possible rejection or network error. Check your wallet."));
                 setGallery((prev)=>prev.map((p)=>p.hash === __TURBOPACK__imported__module__$5b$externals$5d2f$buffer__$5b$external$5d$__$28$buffer$2c$__cjs$29$__["Buffer"].from(photoHash).toString('hex') ? {
                             ...p,
                             isPending: false,
                             isMinted: false
                         } : p));
+                // Return to camera or preview instead of showing success
+                setScreen('preview');
+                return;
             }
             await new Promise((r)=>setTimeout(r, 2000));
             setScreen('printing');
@@ -3285,7 +3341,7 @@ function Home() {
                         disconnect: disconnect
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 278,
+                        lineNumber: 305,
                         columnNumber: 21
                     }, this),
                     screen === 'camera' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$CameraScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CameraScreen"], {
@@ -3297,7 +3353,7 @@ function Home() {
                         capturePhoto: capturePhoto
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 287,
+                        lineNumber: 314,
                         columnNumber: 21
                     }, this),
                     screen === 'preview' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$PreviewScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PreviewScreen"], {
@@ -3309,7 +3365,7 @@ function Home() {
                         setIncludeDateTime: setIncludeDateTime
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 297,
+                        lineNumber: 324,
                         columnNumber: 21
                     }, this),
                     screen === 'metadata' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$MetadataScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["MetadataScreen"], {
@@ -3318,14 +3374,14 @@ function Home() {
                         setScreen: setScreen
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 307,
+                        lineNumber: 334,
                         columnNumber: 21
                     }, this),
                     screen === 'minting' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$MintingScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["MintingScreen"], {
                         mintStatus: mintStatus
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 314,
+                        lineNumber: 341,
                         columnNumber: 21
                     }, this),
                     screen === 'printing' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$PrintingScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PrintingScreen"], {
@@ -3334,7 +3390,7 @@ function Home() {
                         includeDateTime: includeDateTime
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 317,
+                        lineNumber: 344,
                         columnNumber: 21
                     }, this),
                     screen === 'success' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$SuccessScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SuccessScreen"], {
@@ -3346,7 +3402,7 @@ function Home() {
                         includeDateTime: includeDateTime
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 320,
+                        lineNumber: 347,
                         columnNumber: 21
                     }, this),
                     screen === 'gallery' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$GalleryScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["GalleryScreen"], {
@@ -3354,7 +3410,7 @@ function Home() {
                         setScreen: setScreen
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 330,
+                        lineNumber: 357,
                         columnNumber: 21
                     }, this),
                     screen === 'wallet' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$screens$2f$WalletScreen$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["WalletScreen"], {
@@ -3362,13 +3418,13 @@ function Home() {
                         setScreen: setScreen
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 333,
+                        lineNumber: 360,
                         columnNumber: 21
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/page.tsx",
-                lineNumber: 276,
+                lineNumber: 303,
                 columnNumber: 13
             }, this),
             isSyncing && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -3390,7 +3446,7 @@ function Home() {
                         className: "w-2 h-2 bg-[#3FA37C] rounded-full animate-pulse"
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 344,
+                        lineNumber: 371,
                         columnNumber: 21
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3398,19 +3454,19 @@ function Home() {
                         children: "Syncing memories..."
                     }, void 0, false, {
                         fileName: "[project]/src/app/page.tsx",
-                        lineNumber: 345,
+                        lineNumber: 372,
                         columnNumber: 21
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/page.tsx",
-                lineNumber: 338,
+                lineNumber: 365,
                 columnNumber: 17
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/page.tsx",
-        lineNumber: 275,
+        lineNumber: 302,
         columnNumber: 9
     }, this);
 }

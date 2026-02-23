@@ -56,11 +56,21 @@ Enhance the "Keep It Real" dApp to support wallet-specific storage and full on-c
 | | **OUTPUT**: Fetched JSON content merged into `PolaroidPhoto` state |
 | | **VERIFY**: Reload app -> Memories should show correct captions/locations fetched from IPFS. |
 
+### Phase 4: On-Chain Visibility
+
+| Task ID | Name | Agent | Skills | Priority | Dependencies |
+|---------|------|-------|--------|----------|--------------|
+| T4 | Add "View on Solscan" Link to Gallery | `frontend-specialist` | `frontend-design` | P1 | T3 |
+| | **INPUT**: `PolaroidPhoto.id` (PDA address) |
+| | **OUTPUT**: A functional link in the Gallery detail view |
+| | **VERIFY**: Open an image in gallery, click "View on-chain" -> Should open Solscan/Solana Explorer for that address. |
+
 ## Phase X: Verification Checklist
 
 - [ ] Run `npm run dev` and verify no console errors on login.
 - [ ] Cross-check Wallet A and Wallet B visibility.
 - [ ] Verify IPFS metadata structure via gateway link.
+- [ ] Verify "View on Solscan" link points to the correct PDA address.
 - [ ] Run `python .agent/scripts/verify_all.py .`
 
 ## ✅ PHASE X COMPLETE
